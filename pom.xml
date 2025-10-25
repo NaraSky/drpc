@@ -12,6 +12,7 @@
         <module>drpc-annotation</module>
         <module>drpc-common</module>
         <module>drpc-test</module>
+        <module>drpc-provider</module>
     </modules>
 
     <properties>
