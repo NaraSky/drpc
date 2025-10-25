@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.rain.rpc</groupId>
+    <artifactId>drpc</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>drpc-annotation</module>
+    </modules>
+
+    <properties>
+        <!-- 日志框架依赖版本 -->
+        <slf4j.version>2.0.9</slf4j.version>
+        <logback.version>1.4.11</logback.version>
+        <common.logging>1.2</common.logging>
+        
+        <!-- 测试框架依赖版本 -->
+        <junit.version>5.10.0</junit.version>
+        
+        <!-- 网络通信框架依赖版本 -->
+        <netty.version>4.1.100.Final</netty.version>
+        
+        <!-- 序列化框架依赖版本 -->
+        <protostuff.version>1.8.0</protostuff.version>
+        <jackson.version>2.15.2</jackson.version>
+        <hessian.version>4.0.66</hessian.version>
+        <kyro.version>5.5.0</kyro.version>
+        <fst.version>2.57</fst.version>
+        
+        <!-- Zookeeper及Curator依赖版本 -->
+        <zookeeper.version>3.8.2</zookeeper.version>
+        <curator.version>5.5.0</curator.version>
+        
+        <!-- Apache Commons工具类依赖版本 -->
+        <commons.collections4.version>4.4</commons.collections4.version>
+        <commons.lang3.version>3.13.0</commons.lang3.version>
+        
+        <!-- 字节码操作库依赖版本 -->
+        <objenesis.version>3.3</objenesis.version>
+        <cglib.version>3.3.0</cglib.version>
+        <javassist.version>3.29.2-GA</javassist.version>
+        
+        <!-- Spring框架依赖版本 -->
+        <spring.context.version>6.0.12</spring.context.version>
+        
+        <!-- Spring Boot依赖版本 -->
+        <spring.boot.version>3.1.4</spring.boot.version>
+    </properties>
+
+    <dependencies>
+        <!-- SLF4J日志门面，用于统一各种日志框架接口 -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- Logback实现，SLF4J的具体实现之一 -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+
+        <!-- Commons Logging，Apache提供的日志框架 -->
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>${common.logging}</version>
+        </dependency>
+
+        <!-- Spring上下文，提供IoC容器功能 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.context.version}</version>
+        </dependency>
+
+        <!-- JUnit 5测试框架，用于编写和运行单元测试 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Netty网络通信框架，用于构建高性能的网络应用程序 -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+
+        <!-- Apache Commons Collections扩展集合类，提供更多数据结构和算法 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>${commons.collections4.version}</version>
+        </dependency>
+
+        <!-- Apache Commons Lang3工具类，提供字符串、反射等常用操作 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
+        </dependency>
+
+        <!-- Objenesis对象实例化库，用于在不调用构造函数的情况下创建对象 -->
+        <dependency>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+            <version>${objenesis.version}</version>
+        </dependency>
+
+        <!-- CGLib动态代理库，用于在运行时生成代理类 -->
+        <dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>${cglib.version}</version>
+        </dependency>
+
+        <!-- Javassist字节码操作库，用于在运行时编辑类文件 -->
+        <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <version>${javassist.version}</version>
+        </dependency>
+
+        <!-- Jackson Databind模块，用于JSON数据绑定 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Jackson Core模块，提供JSON处理的核心功能 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
