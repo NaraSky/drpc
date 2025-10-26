@@ -13,6 +13,8 @@
         <module>drpc-common</module>
         <module>drpc-test</module>
         <module>drpc-provider</module>
+        <module>drpc-constants</module>
+        <module>drpc-protocol</module>
     </modules>
 
     <properties>
