@@ -9,13 +9,12 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.rain.rpc.test</groupId>
-    <artifactId>drpc-test</artifactId>
+    <groupId>com.rain.rpc.serialization</groupId>
+    <artifactId>drpc-serialization</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>drpc-test-scanner</module>
-        <module>drpc-test-provider</module>
-        <module>drpc-test-consumer</module>
+        <module>drpc-serialization-api</module>
+        <module>drpc-serialization-jdk</module>
     </modules>
 
     <properties>
@@ -23,13 +22,5 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
-        </dependency>
-    </dependencies>
 
 </project>

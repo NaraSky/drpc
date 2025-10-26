@@ -1,5 +1,7 @@
 package com.rain.rpc.provider.common.server.base;
 
+import com.rain.rpc.codec.RpcDecoder;
+import com.rain.rpc.codec.RpcEncoder;
 import com.rain.rpc.provider.common.handler.RpcProviderHandler;
 import com.rain.rpc.provider.common.server.api.Server;
 import io.netty.bootstrap.ServerBootstrap;
@@ -58,6 +60,10 @@ public class BaseServer implements Server {
         }
     }
 
+    /**
+     * Start the Netty RPC server with the configured host and port.
+     * Sets up the Netty pipeline with RPC decoder, encoder, and handler.
+     */
     @Override
     public void startNettyServer() {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -69,9 +75,9 @@ public class BaseServer implements Server {
                         @Override
                         protected void initChannel(SocketChannel channel) throws Exception {
                             ChannelPipeline pipeline = channel.pipeline();
-                            // TODO Reserve for codec, need to implement custom protocol
-                            pipeline.addLast(new StringDecoder())
-                                    .addLast(new StringEncoder())
+                            // Add RPC codec handlers and provider handler to the pipeline
+                            pipeline.addLast(new RpcDecoder())
+                                    .addLast(new RpcEncoder())
                                     .addLast(new RpcProviderHandler(handlerMap));
                         }
                     }).option(io.netty.channel.ChannelOption.SO_BACKLOG, 128)

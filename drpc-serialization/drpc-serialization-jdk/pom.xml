@@ -4,19 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.rain.rpc</groupId>
-        <artifactId>drpc</artifactId>
+        <groupId>com.rain.rpc.serialization</groupId>
+        <artifactId>drpc-serialization</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.rain.rpc.test</groupId>
-    <artifactId>drpc-test</artifactId>
-    <packaging>pom</packaging>
-    <modules>
-        <module>drpc-test-scanner</module>
-        <module>drpc-test-provider</module>
-        <module>drpc-test-consumer</module>
-    </modules>
+    <groupId>com.rain.rpc.serialization.jdk</groupId>
+    <artifactId>drpc-serialization-jdk</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -26,9 +20,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
+            <groupId>com.rain.rpc.serialization.api</groupId>
+            <artifactId>drpc-serialization-api</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
