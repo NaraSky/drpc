@@ -2,6 +2,7 @@ package com.rain.rpc.consumer.common.handler;
 
 import com.alibaba.fastjson2.JSON;
 import com.rain.rpc.protocol.RpcProtocol;
+import com.rain.rpc.protocol.header.RpcHeader;
 import com.rain.rpc.protocol.request.RpcRequest;
 import com.rain.rpc.protocol.response.RpcResponse;
 import io.netty.buffer.Unpooled;
@@ -13,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * RPC Consumer Handler
@@ -24,6 +27,7 @@ public class RpcConsumerHandler extends SimpleChannelInboundHandler<RpcProtocol<
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumerHandler.class);
     private volatile Channel channel;
     private SocketAddress remotePeer;
+    private Map<Long, RpcProtocol<RpcResponse>> pendingRpcResponses = new ConcurrentHashMap<>();
 
     public Channel getChannel() {
         return channel;
@@ -49,19 +53,32 @@ public class RpcConsumerHandler extends SimpleChannelInboundHandler<RpcProtocol<
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcProtocol<RpcResponse> protocol) throws Exception {
-        LOGGER.info("Received response from service provider, request id: {}, response: {}", 
-            protocol.getHeader().getRequestId(), JSON.toJSONString(protocol));
+        if (protocol == null) return;
+        LOGGER.info("Received response from service provider, request id: {}, response: {}",
+                protocol.getHeader().getRequestId(), JSON.toJSONString(protocol));
+        RpcHeader header = protocol.getHeader();
+        long requestId = header.getRequestId();
+        pendingRpcResponses.put(requestId, protocol);
     }
 
     /**
-     * Sends an RPC request to the service provider
+     * Sends an RPC request to the service provider and waits for the response
      *
      * @param protocol the RPC protocol containing the request data
+     * @return the result of the RPC call
      */
-    public void sendRequest(RpcProtocol<RpcRequest> protocol) {
-        LOGGER.info("Sending request to service provider, request id: {}, request: {}", 
-            protocol.getHeader().getRequestId(), JSON.toJSONString(protocol));
+    public Object sendRequest(RpcProtocol<RpcRequest> protocol) {
+        LOGGER.info("Sending request to service provider, request id: {}, request: {}",
+                protocol.getHeader().getRequestId(), JSON.toJSONString(protocol));
         this.channel.writeAndFlush(protocol);
+        RpcHeader header = protocol.getHeader();
+        long requestId = header.getRequestId();
+        while (true) {
+            RpcProtocol<RpcResponse> responseRpcProtocol = pendingRpcResponses.remove(requestId);
+            if (responseRpcProtocol != null) {
+                return responseRpcProtocol.getBody().getResult();
+            }
+        }
     }
 
     public void close() {

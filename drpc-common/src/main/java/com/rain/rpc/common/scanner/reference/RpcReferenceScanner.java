@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 /**
  * RpcReference annotation scanner
  */
-public class RpcReferenceScanner extends ClassLoader {
+public class RpcReferenceScanner extends ClassScanner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcReferenceScanner.class);
 

@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Main class to manage RPC consumer connections and send requests to RPC providers
  */
 public class RpcConsumer {
-    private final Logger LOGGER = LoggerFactory.getLogger(RpcConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumer.class);
 
     private final Bootstrap bootstrap;
     private final EventLoopGroup eventLoopGroup;
@@ -43,11 +43,13 @@ public class RpcConsumer {
 
     /**
      * Sends an RPC request to the service provider
+     * Manages connection creation/reuse and delegates the actual sending to RpcConsumerHandler
      *
      * @param protocol the RPC protocol containing the request data
+     * @return the result of the RPC call
      * @throws InterruptedException if the connection process is interrupted
      */
-    public void sendRequest(RpcProtocol<RpcRequest> protocol) throws InterruptedException {
+    public Object sendRequest(RpcProtocol<RpcRequest> protocol) throws InterruptedException {
         // TODO Hardcoded for now, will be fetched from registry center in the future
         String serviceAddress = "127.0.0.1";
         int port = 27880;
@@ -65,7 +67,7 @@ public class RpcConsumer {
             handlerMap.put(key, handler);
         }
 
-        handler.sendRequest(protocol);
+        return handler.sendRequest(protocol);
     }
 
     /**

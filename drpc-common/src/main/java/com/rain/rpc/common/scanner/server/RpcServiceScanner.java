@@ -3,6 +3,7 @@ package com.rain.rpc.common.scanner.server;
 import com.rain.rpc.annotation.RpcService;
 import com.rain.rpc.common.helper.RpcServiceHelper;
 import com.rain.rpc.common.scanner.ClassScanner;
+import com.rain.rpc.common.scanner.reference.RpcReferenceScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,7 @@ import java.util.Map;
  * Scanner for classes annotated with @RpcService.
  * This class scans packages for classes annotated with @RpcService and registers them as services.
  */
-public class RpcServiceScanner extends ClassLoader {
+public class RpcServiceScanner extends ClassScanner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcServiceScanner.class);
 

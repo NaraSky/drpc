@@ -9,7 +9,7 @@ public class RpcSingleServer extends BaseServer {
 
     private final Logger logger = LoggerFactory.getLogger(RpcSingleServer.class);
 
-        /**
+    /**
      * Constructs an RpcSingleServer with the specified server address and package to scan.
      * Initializes the server and scans for RPC service implementations in the specified package.
      *

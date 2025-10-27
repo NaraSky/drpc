@@ -5,12 +5,16 @@ import com.rain.rpc.consumer.common.RpcConsumer;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.header.RpcHeaderFactory;
 import com.rain.rpc.protocol.request.RpcRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RpcConsumerHandlerTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumerHandlerTest.class);
+
     public static void main(String[] args) throws InterruptedException {
         RpcConsumer instance = RpcConsumer.getInstance();
-        instance.sendRequest(getRpcRequestProtocol());
-        Thread.sleep(1000);
+        Object result = instance.sendRequest(getRpcRequestProtocol());
+        LOGGER.info("Received response from service provider, result: {}", result);
         instance.close();
     }
 
