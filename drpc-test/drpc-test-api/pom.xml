@@ -9,26 +9,13 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.rain.rpc.test.provider</groupId>
-    <artifactId>drpc-test-provider</artifactId>
+    <groupId>com.rain.rpc.test.api</groupId>
+    <artifactId>drpc-test-api</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.rain.rpc.provider</groupId>
-            <artifactId>drpc-provider-native</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.rain.rpc.test.api</groupId>
-            <artifactId>drpc-test-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
 
 </project>

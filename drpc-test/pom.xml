@@ -16,6 +16,7 @@
         <module>drpc-test-scanner</module>
         <module>drpc-test-provider</module>
         <module>drpc-test-consumer</module>
+        <module>drpc-test-api</module>
     </modules>
 
     <properties>

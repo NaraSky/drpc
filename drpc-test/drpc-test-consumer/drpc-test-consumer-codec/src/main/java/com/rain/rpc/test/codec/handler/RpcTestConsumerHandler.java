@@ -30,8 +30,8 @@ public class RpcTestConsumerHandler extends SimpleChannelInboundHandler<RpcProto
         
         LOGGER.info("Building RPC request body");
         RpcRequest request = new RpcRequest();
-        request.setClassName("com.rain.rpc.test.DemoService");
-        request.setGroup("rain");
+        request.setClassName("com.rain.rpc.test.api.DemoService");
+        request.setGroup("default");
         request.setMethodName("hello");
         request.setParameters(new Object[]{"rain"});
         request.setParameterTypes(new Class[]{String.class});

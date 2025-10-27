@@ -1,6 +1,7 @@
 package com.rain.rpc.common.scanner.server;
 
 import com.rain.rpc.annotation.RpcService;
+import com.rain.rpc.common.helper.RpcServiceHelper;
 import com.rain.rpc.common.scanner.ClassScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,9 +47,10 @@ public class RpcServiceScanner extends ClassLoader {
                     LOGGER.info("group: {}", rpcService.group());
 
                     String serviceName = getServiceName(rpcService);
-                    // com.rain.rpc.test.provider.service.DemoService1.0.0default
-                    String key = serviceName.concat(rpcService.version()).concat(rpcService.group());
+                    String key = RpcServiceHelper.buildServiceKey(serviceName, rpcService.version(), rpcService.group());
                     handlerMap.put(key, clazz.newInstance());
+                    // 日志打印handlerMap
+                    LOGGER.info("Currently registered service: {}", handlerMap);
                 }
             } catch (Exception e) {
                 LOGGER.error("Failed to scan classes: {}", e.getMessage(), e);
