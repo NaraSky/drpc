@@ -35,6 +35,7 @@ public class BaseServer implements Server {
     protected String host = DEFAULT_HOST;
     protected int port = DEFAULT_PORT;
     protected Map<String, Object> handlerMap = new HashMap<>();
+    private String reflectType;
 
     /**
      * Constructs a BaseServer with the specified server address.
@@ -42,7 +43,7 @@ public class BaseServer implements Server {
      * 
      * @param serverAddress the server address in "host:port" format, or null/empty for default
      */
-    public BaseServer(String serverAddress) {
+    public BaseServer(String serverAddress, String reflectType) {
         if (!StringUtils.isEmpty(serverAddress)) {
             String[] serverArray = serverAddress.split(":");
             // Check if the server address has both host and port
@@ -58,6 +59,8 @@ public class BaseServer implements Server {
                 LOGGER.warn("Invalid server address format: {}, using default host: {} and port: {}", serverAddress, DEFAULT_HOST, DEFAULT_PORT);
             }
         }
+        this.reflectType = reflectType;
+        LOGGER.info("BaseServer initialized with host: {}, port: {}, reflectType: {}", this.host, this.port, this.reflectType);
     }
 
     /**
@@ -78,20 +81,21 @@ public class BaseServer implements Server {
                             // Add RPC codec handlers and provider handler to the pipeline
                             pipeline.addLast(new RpcDecoder())
                                     .addLast(new RpcEncoder())
-                                    .addLast(new RpcProviderHandler(handlerMap));
+                                    .addLast(new RpcProviderHandler(reflectType, handlerMap));
                         }
                     }).option(io.netty.channel.ChannelOption.SO_BACKLOG, 128)
                     .childOption(io.netty.channel.ChannelOption.SO_KEEPALIVE, true);
 
             ChannelFuture channelFuture = bootstrap.bind(host, port).sync();
-            LOGGER.info("RPC Provider Server started on port {}", port);
+            LOGGER.info("RPC Provider Server started successfully on {}:{}", host, port);
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
-            LOGGER.error("RPC Provider Server interrupted: {}", e.getMessage(), e);
+            LOGGER.error("RPC Provider Server interrupted during operation: {}", e.getMessage(), e);
             Thread.currentThread().interrupt(); // Preserve the interrupted status
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
+            LOGGER.info("RPC Provider Server shutdown completed");
         }
     }
 }

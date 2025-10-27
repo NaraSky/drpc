@@ -26,7 +26,7 @@ decoder -> decoder : Deserialize with\nJDK serialization
 decoder -> providerHandler : Pass RpcProtocol<Request>
 providerHandler -> providerHandler : Submit to ServerThreadPool
 providerHandler -> providerHandler : Look up service\nin handlerMap
-providerHandler -> providerHandler : Invoke method\nvia reflection
+providerHandler -> providerHandler : Invoke method\nbased on reflectType\n(JDK or CGLIB)
 providerHandler -> encoder : Serialize response\nwith JDK serialization
 encoder -> network : Send response
 network -> decoder : Receive response
@@ -47,6 +47,10 @@ svcScanner -> svcScanner : Create service instances\nand register in handlerMap
 
 note right of provider
   Service implementations\nare annotated with\n@RpcService
+end note
+
+note right of providerHandler
+  Supports multiple reflection types:\n- JDK Reflection\n- CGLIB Reflection\nFalls back to JDK if CGLIB fails
 end note
 
 @enduml

@@ -22,7 +22,7 @@ public class RpcSingleServerTest {
         String servicePackage = "com.rain.rpc.test";
         LOGGER.info("Creating RPC server with address: {} and scanning package: {}", serverAddress, servicePackage);
         
-        RpcSingleServer singleServer = new RpcSingleServer(serverAddress, servicePackage);
+        RpcSingleServer singleServer = new RpcSingleServer(serverAddress, servicePackage, "cglib");
         
         LOGGER.info("RPC server instance created successfully, now starting Netty server");
         

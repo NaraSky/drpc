@@ -16,12 +16,15 @@ public class RpcSingleServer extends BaseServer {
      * @param serverAddress the server address in "host:port" format, or null/empty for default
      * @param scanPackage the package to scan for RPC service implementations
      */
-    public RpcSingleServer(String serverAddress, String scanPackage) {
-        super(serverAddress);
+    public RpcSingleServer(String serverAddress, String scanPackage, String reflectType) {
+        super(serverAddress, reflectType);
+        logger.info("Initializing RpcSingleServer with serverAddress: {}, scanPackage: {}, reflectType: {}", 
+            serverAddress, scanPackage, reflectType);
         try {
             this.handlerMap = RpcServiceScanner.doScannerWithRpcServiceAnnotationFilterAndRegistryService(scanPackage);
+            logger.info("Successfully scanned and registered {} service implementations", handlerMap.size());
         } catch (Exception e) {
-            logger.error("RPC Server init error", e);
+            logger.error("Failed to initialize RPC Server by scanning services in package: {}", scanPackage, e);
         }
     }
 }
