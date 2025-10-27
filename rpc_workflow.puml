@@ -3,7 +3,7 @@ title DRPC Framework Workflow
 
 actor "Client" as client
 participant "Consumer\nApplication" as consumer
-participant "RPC Test\nConsumer Handler" as consumerHandler
+participant "RPC Consumer\nHandler" as consumerHandler
 participant "RPC Encoder" as encoder
 participant "Network" as network
 participant "RPC Decoder" as decoder
@@ -19,15 +19,15 @@ end note
 client -> consumer : Start application
 consumer -> consumerHandler : Channel becomes active
 consumerHandler -> consumerHandler : Create RPC request\nwith RpcHeaderFactory
-consumerHandler -> encoder : Serialize request\nwith JDK serialization
+consumerHandler -> encoder : Serialize request\nwith specified serialization
 encoder -> network : Send encoded data
 network -> decoder : Receive data
-decoder -> decoder : Deserialize with\nJDK serialization
+decoder -> decoder : Deserialize with\nspecified serialization
 decoder -> providerHandler : Pass RpcProtocol<Request>
 providerHandler -> providerHandler : Submit to ServerThreadPool
 providerHandler -> providerHandler : Look up service\nin handlerMap
 providerHandler -> providerHandler : Invoke method\nbased on reflectType\n(JDK or CGLIB)
-providerHandler -> encoder : Serialize response\nwith JDK serialization
+providerHandler -> encoder : Serialize response\nwith specified serialization
 encoder -> network : Send response
 network -> decoder : Receive response
 decoder -> consumerHandler : Pass RpcProtocol<Response>
@@ -50,7 +50,7 @@ note right of provider
 end note
 
 note right of providerHandler
-  Supports multiple reflection types:\n- JDK Reflection\n- CGLIB Reflection\nFalls back to JDK if CGLIB fails
+  Supports multiple reflection types:\n- JDK Reflection\n- CGLIB Reflection\nConfigured via reflectType parameter
 end note
 
 @enduml
