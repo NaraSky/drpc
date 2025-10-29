@@ -51,8 +51,8 @@ public class RpcTestConsumerHandler extends SimpleChannelInboundHandler<RpcProto
         // Process the response
         RpcResponse response = protocol.getBody();
         if (response != null) {
-            if (response.getError() != null) {
-                LOGGER.error("RPC call failed: {}", response.getError());
+            if (response.isError()) {
+                LOGGER.error("RPC call failed: {}", response.isError());
             } else {
                 LOGGER.info("RPC call successful, result: {}", response.getResult());
             }

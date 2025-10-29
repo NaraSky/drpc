@@ -1,5 +1,6 @@
 package com.rain.rpc.consumer.common;
 
+import com.rain.rpc.common.threadpool.ClientThreadPool;
 import com.rain.rpc.consumer.common.future.RpcFuture;
 import com.rain.rpc.consumer.common.handler.RpcConsumerHandler;
 import com.rain.rpc.consumer.common.initializer.RpcConsumerInitializer;
@@ -110,5 +111,6 @@ public class RpcConsumer {
     public void close() {
         LOGGER.info("Shutting down RPC consumer and event loop group");
         eventLoopGroup.shutdownGracefully();
+        ClientThreadPool.shutdown();
     }
 }

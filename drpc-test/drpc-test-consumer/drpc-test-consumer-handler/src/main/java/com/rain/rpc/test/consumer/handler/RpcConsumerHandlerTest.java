@@ -2,7 +2,7 @@ package com.rain.rpc.test.consumer.handler;
 
 import com.rain.rpc.constants.RpcConstants;
 import com.rain.rpc.consumer.common.RpcConsumer;
-import com.rain.rpc.consumer.common.context.RpcContext;
+import com.rain.rpc.consumer.common.callback.AsyncRpcCallback;
 import com.rain.rpc.consumer.common.future.RpcFuture;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.header.RpcHeaderFactory;
@@ -17,9 +17,19 @@ public class RpcConsumerHandlerTest {
 
     public static void main(String[] args) throws InterruptedException, ExecutionException {
         RpcConsumer consumer = RpcConsumer.getInstance();
-        consumer.sendRequest(getRpcRequestProtocol());
-        RpcFuture future = RpcContext.getContext().getRpcFuture();
-        LOGGER.info("从服务消费者获取到的数据===>>>" + future.get());
+        RpcFuture rpcFuture = consumer.sendRequest(getRpcRequestProtocol());
+        rpcFuture.addCallback(new AsyncRpcCallback() {
+            @Override
+            public void onSuccess(Object result) {
+                LOGGER.info("从服务消费者获取到的数据===>>>" + result);
+            }
+
+            @Override
+            public void onException(Exception e) {
+                LOGGER.info("抛出了异常===>>>" + e);
+            }
+        });
+        Thread.sleep(200);
         consumer.close();
     }
 
@@ -35,7 +45,7 @@ public class RpcConsumerHandlerTest {
         request.setVersion("1.0.0");
         request.setGroup("default");
         request.setOneway(false);
-        request.setAsync(true);
+        request.setAsync(false);
         protocol.setBody(request);
         return protocol;
     }

@@ -173,6 +173,20 @@ class RpcFuture {
   -long startTime
   -long responseTimeThreshold
   +done(RpcProtocol<RpcResponse>)
+  +addCallback(AsyncRpcCallback)
+}
+
+class AsyncRpcCallback {
+  +onSuccess(Object)
+  +onException(Exception)
+}
+
+class RpcContext {
+  -RpcContext()
+  +getContext()
+  +setRpcFuture(RpcFuture)
+  +getRpcFuture()
+  +clear()
 }
 
 ' 工具类
@@ -186,6 +200,12 @@ class IdFactory {
 }
 
 class ServerThreadPool {
+  -ThreadPoolExecutor threadPoolExecutor
+  +submit(Runnable)
+  +shutdown()
+}
+
+class ClientThreadPool {
   -ThreadPoolExecutor threadPoolExecutor
   +submit(Runnable)
   +shutdown()
@@ -262,6 +282,10 @@ JdkSerialization ..> SerializerException : throws
 RpcFuture ..> RpcProtocol : uses
 RpcFuture ..> RpcRequest : uses
 RpcFuture ..> RpcResponse : uses
+RpcFuture ..> AsyncRpcCallback : manages callbacks
+RpcFuture ..> ClientThreadPool : uses for callbacks
+
+RpcContext ..> RpcFuture : stores
 
 ' Workflow relationship
 RpcConsumer ..> rpcConsumer : instance of

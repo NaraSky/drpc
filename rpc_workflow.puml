@@ -101,4 +101,10 @@ note right of consumerHandler
   oneway: sends request without waiting
 end note
 
+note right of RpcFuture
+  Implements CompletableFuture<Object>
+  Supports both sync (get) and async (callbacks)
+  Callbacks executed in ClientThreadPool
+end note
+
 @enduml
