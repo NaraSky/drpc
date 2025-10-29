@@ -18,22 +18,22 @@ public class RpcEncoder extends MessageToByteEncoder<RpcProtocol<Object>> implem
     @Override
     protected void encode(ChannelHandlerContext ctx, RpcProtocol<Object> message, ByteBuf byteBuf) throws Exception {
         RpcHeader header = message.getHeader();
-        
+
         // Write header information
         byteBuf.writeShort(header.getMagic());
         byteBuf.writeByte(header.getMessageType());
         byteBuf.writeByte(header.getStatus());
         byteBuf.writeLong(header.getRequestId());
-        
+
         String serializationType = header.getSerializationType();
-        
+
         // Get serialization instance
         // TODO: Support SPI for multiple serialization methods
         Serialization serialization = getJdkSerialization();
-        
+
         // Write serialization type with padding
         byteBuf.writeBytes(SerializationUtils.paddingString(serializationType).getBytes(StandardCharsets.UTF_8));
-        
+
         // Serialize and write data
         byte[] data = serialization.serialize(message.getBody());
         byteBuf.writeInt(data.length);

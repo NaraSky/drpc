@@ -13,8 +13,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Class scanner for scanning all classes under a specified package
- * Supports scanning class files in the project and class files in jar packages
+ * Class scanner for scanning all classes under a specified package.
+ * Supports scanning class files in the project and class files in jar packages.
  */
 public class ClassScanner {
     // File protocol identifier, used to determine if it is a file type URL
@@ -27,7 +27,8 @@ public class ClassScanner {
     private static final String CLASS_FILE_SUFFIX = ".class";
 
     /**
-     * Get a list of all class names under the specified package name
+     * Get a list of all class names under the specified package name.
+     *
      * @param packageName Package name to scan
      * @return List containing all class names
      * @throws Exception Exceptions that may be thrown during scanning
@@ -58,9 +59,9 @@ public class ClassScanner {
         // Return class name list
         return classNameList;
     }
-    
+
     /**
-     * Scan all class information under the specified package in the current project
+     * Scan all class information under the specified package in the current project.
      *
      * @param packageName   Package name to scan
      * @param packagePath   Complete path of the package on disk
@@ -97,7 +98,7 @@ public class ClassScanner {
     }
 
     /**
-     * Scan all class information under the specified package in the Jar file
+     * Scan all class information under the specified package in the Jar file.
      *
      * @param packageName    Package name to scan
      * @param classNameList  List collection storing completed class names
@@ -105,7 +106,7 @@ public class ClassScanner {
      * @param packageDirName The front part name of the current package name
      * @param url            URL address of the package
      * @return processed package name for the next call
-     * @throws IOException
+     * @throws IOException if an I/O error occurs
      */
     private static String findAndAddClassesInPackageByJar(String packageName, List<String> classNameList, boolean recursive, String packageDirName, URL url) throws IOException {
         // Get the Jar file object

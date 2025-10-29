@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 public class RpcMessage implements Serializable {
 
+    private static final long serialVersionUID = -1323874332104734165L;
+
     private boolean oneway;
 
     private boolean async;

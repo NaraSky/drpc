@@ -1,0 +1,266 @@
+@startuml
+' 注解模块
+class RpcReference <<annotation>> {
+  +String version()
+  +String registryType()
+  +String registryAddr()
+  +String loadBalanceType()
+  +String serializationType()
+  +long timeout()
+  +boolean async()
+  +boolean oneway()
+  +String proxy()
+  +String group()
+}
+
+class RpcService <<annotation>> {
+  +Class interfaceClass()
+  +String interfaceClassName()
+  +String version()
+  +String group()
+}
+
+' 协议模块
+class "RpcProtocol<T>" as RpcProtocol {
+  -RpcHeader header
+  -T body
+  +getHeader()
+  +setHeader()
+  +getBody()
+  +setBody()
+}
+
+class RpcHeader {
+  -short magic
+  -byte messageType
+  -byte status
+  -long requestId
+  -String serializationType
+  -int messageLength
+}
+
+abstract class RpcMessage {
+  -boolean oneway
+  -boolean async
+}
+
+class RpcRequest {
+  -String className
+  -String methodName
+  -Class[] parameterTypes
+  -Object[] parameters
+  -String version
+  -String group
+}
+
+class RpcResponse {
+  -String error
+  -Object result
+}
+
+class RpcHeaderFactory {
+  +getRequestHeader(String)
+}
+
+' 枚举
+enum RpcType {
+  REQUEST
+  RESPONSE
+  HEARTBEAT
+}
+
+enum RpcStatus {
+  SUCCESS
+  FAIL
+}
+
+' 编解码模块
+interface RpcCodec {
+  +getJdkSerialization()
+}
+
+class RpcEncoder {
+  +encode()
+}
+
+class RpcDecoder {
+  +decode()
+}
+
+' 序列化模块
+interface Serialization {
+  +serialize(T)
+  +deserialize(byte[], Class)
+}
+
+class JdkSerialization {
+  +serialize(T)
+  +deserialize(byte[], Class)
+}
+
+' 扫描器模块
+class ClassScanner {
+  +getClassNameList(String)
+  -findAndAddClassesInPackageByFile()
+  -findAndAddClassesInPackageByJar()
+}
+
+class RpcServiceScanner {
+  +doScannerWithRpcServiceAnnotationFilterAndRegistryService(String)
+  -getServiceName(RpcService)
+}
+
+class RpcReferenceScanner {
+  +doScannerWithRpcReferenceAnnotationFilter(String)
+}
+
+' Provider模块
+interface Server {
+  +startNettyServer()
+}
+
+class BaseServer {
+  #String host
+  #int port
+  #Map handlerMap
+  -String reflectType
+  +startNettyServer()
+}
+
+class RpcSingleServer {
+  +RpcSingleServer(String, String, String)
+}
+
+class RpcProviderHandler {
+  -Map handlerMap
+  -String reflectType
+  #channelRead0()
+  -handle(RpcRequest)
+  -invokeMethod()
+  -invokeJDKMethod()
+  -invokeCGLIBMethod()
+}
+
+' Consumer模块
+class RpcConsumer {
+  -Bootstrap bootstrap
+  -EventLoopGroup eventLoopGroup
+  -Map handlerMap
+  +sendRequest(RpcProtocol)
+  +getRpcConsumerHandler()
+  +getInstance()
+}
+
+class RpcConsumerHandler {
+  -Channel channel
+  -SocketAddress remotePeer
+  -Map pendingRPC
+  #channelRead0()
+  +sendRequest(RpcProtocol)
+  +getChannel()
+  +getRemotePeer()
+  +close()
+}
+
+class RpcConsumerInitializer {
+  #initChannel(SocketChannel)
+}
+
+class RpcFuture {
+  -Sync sync
+  -RpcProtocol<RpcRequest> requestRpcProtocol
+  -RpcProtocol<RpcResponse> responseRpcProtocol
+  -long startTime
+  -long responseTimeThreshold
+  +done(RpcProtocol<RpcResponse>)
+}
+
+' 工具类
+class RpcServiceHelper {
+  +buildServiceKey(String, String, String)
+}
+
+class IdFactory {
+  -AtomicLong REQUEST_ID
+  +getRequestId()
+}
+
+class ServerThreadPool {
+  -ThreadPoolExecutor threadPoolExecutor
+  +submit(Runnable)
+  +shutdown()
+}
+
+class SerializationUtils {
+  +paddingString(String)
+  +subString(String)
+  +transNullToEmpty(String)
+}
+
+class RpcConstants <<constants>> {
+}
+
+class SerializerException <<exception>> {
+}
+
+' 关系定义
+RpcProtocol *-- RpcHeader
+RpcRequest --|> RpcMessage
+RpcResponse --|> RpcMessage
+RpcProtocol ..> RpcRequest : uses
+RpcProtocol ..> RpcResponse : uses
+
+RpcEncoder ..|> RpcCodec
+RpcDecoder ..|> RpcCodec
+RpcCodec ..> Serialization : uses
+JdkSerialization ..|> Serialization
+
+RpcEncoder ..> RpcProtocol : encodes
+RpcDecoder ..> RpcProtocol : decodes
+RpcEncoder ..> SerializationUtils : uses
+RpcDecoder ..> SerializationUtils : uses
+
+RpcServiceScanner --|> ClassScanner
+RpcReferenceScanner --|> ClassScanner
+RpcServiceScanner ..> RpcService : scans
+RpcReferenceScanner ..> RpcReference : scans
+RpcServiceScanner ..> RpcServiceHelper : uses
+
+BaseServer ..|> Server
+RpcSingleServer --|> BaseServer
+RpcSingleServer ..> RpcServiceScanner : uses
+BaseServer ..> RpcProviderHandler : uses
+BaseServer ..> RpcEncoder : uses
+BaseServer ..> RpcDecoder : uses
+
+RpcProviderHandler ..> RpcProtocol : processes
+RpcProviderHandler ..> RpcRequest : handles
+RpcProviderHandler ..> RpcResponse : creates
+RpcProviderHandler ..> RpcServiceHelper : uses
+RpcProviderHandler ..> ServerThreadPool : uses
+
+RpcConsumer ..> RpcConsumerHandler : uses
+RpcConsumer ..> RpcConsumerInitializer : uses
+RpcConsumerInitializer ..> RpcEncoder : configures
+RpcConsumerInitializer ..> RpcDecoder : configures
+RpcConsumerInitializer ..> RpcConsumerHandler : configures
+
+RpcConsumerHandler ..> RpcProtocol : processes
+RpcConsumerHandler ..> RpcRequest : sends
+RpcConsumerHandler ..> RpcResponse : receives
+RpcConsumerHandler ..> RpcFuture : uses
+
+RpcConsumer ..> RpcFuture : returns
+RpcConsumerHandler ..> RpcFuture : returns
+
+RpcHeaderFactory ..> RpcHeader : creates
+RpcHeaderFactory ..> IdFactory : uses
+RpcHeaderFactory ..> RpcType : uses
+
+JdkSerialization ..> SerializerException : throws
+
+RpcFuture ..> RpcProtocol : uses
+RpcFuture ..> RpcRequest : uses
+RpcFuture ..> RpcResponse : uses
+
+@enduml

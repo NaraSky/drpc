@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -25,36 +25,36 @@
         <slf4j.version>2.0.9</slf4j.version>
         <logback.version>1.4.11</logback.version>
         <common.logging>1.2</common.logging>
-        
+
         <!-- 测试框架依赖版本 -->
         <junit.version>5.10.0</junit.version>
-        
+
         <!-- 网络通信框架依赖版本 -->
         <netty.version>4.1.100.Final</netty.version>
-        
+
         <!-- 序列化框架依赖版本 -->
         <protostuff.version>1.8.0</protostuff.version>
         <jackson.version>2.15.2</jackson.version>
         <hessian.version>4.0.66</hessian.version>
         <kyro.version>5.5.0</kyro.version>
         <fst.version>2.0.57</fst.version>
-        
+
         <!-- Zookeeper及Curator依赖版本 -->
         <zookeeper.version>3.8.2</zookeeper.version>
         <curator.version>5.5.0</curator.version>
-        
+
         <!-- Apache Commons工具类依赖版本 -->
         <commons.collections4.version>4.4</commons.collections4.version>
         <commons.lang3.version>3.13.0</commons.lang3.version>
-        
+
         <!-- 字节码操作库依赖版本 -->
         <objenesis.version>3.3</objenesis.version>
         <cglib.version>3.3.0</cglib.version>
         <javassist.version>3.29.2-GA</javassist.version>
-        
+
         <!-- Spring框架依赖版本 -->
         <spring.context.version>6.0.12</spring.context.version>
-        
+
         <!-- Spring Boot依赖版本 -->
         <spring.boot.version>3.1.4</spring.boot.version>
     </properties>

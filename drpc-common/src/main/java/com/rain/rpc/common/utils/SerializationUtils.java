@@ -4,12 +4,11 @@ import java.util.stream.IntStream;
 
 public class SerializationUtils {
 
-    private static final String PADDING_STRING = "0";
-
     /**
      * The maximum length of serialization type is 16
      */
     public static final int MAX_SERIALIZATION_TYPE_COUNT = 16;
+    private static final String PADDING_STRING = "0";
 
     /**
      * Pad the string with zeros to make it 16 characters long

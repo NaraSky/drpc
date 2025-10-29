@@ -2,16 +2,19 @@ package com.rain.rpc.protocol.header;
 
 import java.io.Serializable;
 
+/**
+ * RPC Protocol Header
+ * 
+ * Header Format:
+ * +------------------------------------------------------------------------------------+
+ * | Magic number 2byte | Message type 1byte | Status 1byte |     Request ID 8byte      |
+ * +------------------------------------------------------------------------------------+
+ * |           Serialization type 16byte                  |    Data length 4byte        |
+ * +---------------------------------------------------------------+
+ */
 public class RpcHeader implements Serializable {
 
     private static final long serialVersionUID = -309546999034745437L;
-     /*
-    +---------------------------------------------------------------+
-    | Magic number 2byte | Message type 1byte | Status 1byte |     Request ID 8byte      |
-    +---------------------------------------------------------------+
-    |           Serialization type 16byte      |        Data length 4byte          |
-    +---------------------------------------------------------------+
-    */
 
     /**
      * Magic number, 2 bytes
@@ -34,7 +37,7 @@ public class RpcHeader implements Serializable {
     private long requestId;
 
     /**
-     * Serialization type, 16 bytes. If less than 16 bytes, pad with 0s. 
+     * Serialization type, 16 bytes. If less than 16 bytes, pad with 0s.
      * The serialization type length cannot exceed 16.
      */
     private String serializationType;

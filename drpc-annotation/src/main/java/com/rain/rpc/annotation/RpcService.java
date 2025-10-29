@@ -13,12 +13,12 @@ import java.lang.annotation.Target;
 public @interface RpcService {
 
     /**
-     * 接口类
+     * Interface class
      */
     Class<?> interfaceClass() default void.class;
 
     /**
-     * 完整的接口类名
+     * Full interface class name
      */
     String interfaceClassName() default "";
 

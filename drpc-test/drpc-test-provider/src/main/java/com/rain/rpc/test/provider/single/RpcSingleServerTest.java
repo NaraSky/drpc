@@ -14,21 +14,14 @@ public class RpcSingleServerTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcSingleServerTest.class);
 
     @Test
-    public void startRpcSingleServer(){
-        LOGGER.info("Starting RPC Single Server test");
-        
+    public void startRpcSingleServer() {
         // Create RPC server instance with specified host, port and service package
         String serverAddress = "127.0.0.1:27880";
         String servicePackage = "com.rain.rpc.test";
-        LOGGER.info("Creating RPC server with address: {} and scanning package: {}", serverAddress, servicePackage);
-        
-        RpcSingleServer singleServer = new RpcSingleServer(serverAddress, servicePackage, "cglib");
-        
-        LOGGER.info("RPC server instance created successfully, now starting Netty server");
-        
+        String reflectType = "cglib";
+        RpcSingleServer singleServer = new RpcSingleServer(serverAddress, servicePackage, reflectType);
+
         // Start the Netty server
         singleServer.startNettyServer();
-        
-        LOGGER.info("RPC server started successfully");
     }
 }

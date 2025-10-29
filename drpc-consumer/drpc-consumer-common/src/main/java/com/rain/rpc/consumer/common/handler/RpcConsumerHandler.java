@@ -1,6 +1,7 @@
 package com.rain.rpc.consumer.common.handler;
 
-import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
+import com.rain.rpc.consumer.common.future.RpcFuture;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.header.RpcHeader;
 import com.rain.rpc.protocol.request.RpcRequest;
@@ -17,17 +18,15 @@ import java.net.SocketAddress;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * RPC Consumer Handler
- * Handles the communication logic for the RPC consumer
- * Sends RPC requests and processes RPC responses
- */
 public class RpcConsumerHandler extends SimpleChannelInboundHandler<RpcProtocol<RpcResponse>> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumerHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(RpcConsumerHandler.class);
     private volatile Channel channel;
     private SocketAddress remotePeer;
-    private Map<Long, RpcProtocol<RpcResponse>> pendingRpcResponses = new ConcurrentHashMap<>();
+
+    // Store the mapping relationship between request ID and RpcResponse protocol
+    //private Map<Long, RpcProtocol<RpcResponse>> pendingResponse = new ConcurrentHashMap<>();
+
+    private Map<Long, RpcFuture> pendingRPC = new ConcurrentHashMap<>();
 
     public Channel getChannel() {
         return channel;
@@ -41,48 +40,48 @@ public class RpcConsumerHandler extends SimpleChannelInboundHandler<RpcProtocol<
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
         this.remotePeer = this.channel.remoteAddress();
-        LOGGER.info("Consumer channel is now active, remote peer: {}", remotePeer);
     }
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         super.channelRegistered(ctx);
         this.channel = ctx.channel();
-        LOGGER.debug("Channel registered with handler, channel id: {}", channel.id());
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcProtocol<RpcResponse> protocol) throws Exception {
-        if (protocol == null) return;
-        LOGGER.info("Received response from service provider, request id: {}, response: {}",
-                protocol.getHeader().getRequestId(), JSON.toJSONString(protocol));
+        if (protocol == null) {
+            return;
+        }
+        logger.info("Consumer received data===>>>{}", JSONObject.toJSONString(protocol));
         RpcHeader header = protocol.getHeader();
         long requestId = header.getRequestId();
-        pendingRpcResponses.put(requestId, protocol);
-    }
-
-    /**
-     * Sends an RPC request to the service provider and waits for the response
-     *
-     * @param protocol the RPC protocol containing the request data
-     * @return the result of the RPC call
-     */
-    public Object sendRequest(RpcProtocol<RpcRequest> protocol) {
-        LOGGER.info("Sending request to service provider, request id: {}, request: {}",
-                protocol.getHeader().getRequestId(), JSON.toJSONString(protocol));
-        this.channel.writeAndFlush(protocol);
-        RpcHeader header = protocol.getHeader();
-        long requestId = header.getRequestId();
-        while (true) {
-            RpcProtocol<RpcResponse> responseRpcProtocol = pendingRpcResponses.remove(requestId);
-            if (responseRpcProtocol != null) {
-                return responseRpcProtocol.getBody().getResult();
-            }
+        RpcFuture rpcFuture = pendingRPC.remove(requestId);
+        if (rpcFuture != null) {
+            rpcFuture.done(protocol);
         }
     }
 
+    /**
+     * Send request from service consumer to service provider
+     */
+    public RpcFuture sendRequest(RpcProtocol<RpcRequest> protocol) {
+        logger.info("Consumer sent data===>>>{}", JSONObject.toJSONString(protocol));
+        RpcFuture rpcFuture = this.getRpcFuture(protocol);
+        channel.writeAndFlush(protocol);
+        return rpcFuture;
+    }
+
+    private RpcFuture getRpcFuture(RpcProtocol<RpcRequest> protocol) {
+        RpcFuture rpcFuture = new RpcFuture(protocol);
+        RpcHeader header = protocol.getHeader();
+        long requestId = header.getRequestId();
+        pendingRPC.put(requestId, rpcFuture);
+        return rpcFuture;
+    }
+
     public void close() {
-        LOGGER.info("Closing consumer channel connection");
         channel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
     }
+
 }

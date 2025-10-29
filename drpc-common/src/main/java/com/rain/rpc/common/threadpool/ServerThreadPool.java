@@ -12,12 +12,12 @@ public class ServerThreadPool {
         threadPoolExecutor = new ThreadPoolExecutor(16, 16, 600L, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(65536));
     }
 
-    public static void submit(Runnable task){
+    public static void submit(Runnable task) {
         threadPoolExecutor.submit(task);
     }
 
 
-    public static void shutdown(){
+    public static void shutdown() {
         threadPoolExecutor.shutdown();
     }
 }

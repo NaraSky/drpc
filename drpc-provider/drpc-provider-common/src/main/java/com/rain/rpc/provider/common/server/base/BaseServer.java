@@ -12,8 +12,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,10 +38,13 @@ public class BaseServer implements Server {
     /**
      * Constructs a BaseServer with the specified server address.
      * If serverAddress is null or empty, uses default host and port.
-     * 
+     *
      * @param serverAddress the server address in "host:port" format, or null/empty for default
+     * @param reflectType the type of reflection to use for service invocation
      */
     public BaseServer(String serverAddress, String reflectType) {
+        LOGGER.info("Initializing BaseServer with serverAddress={}, reflectType={}", serverAddress, reflectType);
+
         if (!StringUtils.isEmpty(serverAddress)) {
             String[] serverArray = serverAddress.split(":");
             // Check if the server address has both host and port
@@ -58,6 +59,8 @@ public class BaseServer implements Server {
             } else {
                 LOGGER.warn("Invalid server address format: {}, using default host: {} and port: {}", serverAddress, DEFAULT_HOST, DEFAULT_PORT);
             }
+        } else {
+            LOGGER.info("No server address provided, using default host: {} and port: {}", DEFAULT_HOST, DEFAULT_PORT);
         }
         this.reflectType = reflectType;
         LOGGER.info("BaseServer initialized with host: {}, port: {}, reflectType: {}", this.host, this.port, this.reflectType);
@@ -69,26 +72,39 @@ public class BaseServer implements Server {
      */
     @Override
     public void startNettyServer() {
+        LOGGER.info("Starting Netty RPC Server on {}:{}", host, port);
+
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
+        LOGGER.debug("Created EventLoopGroups: bossGroup={}, workerGroup={}", bossGroup, workerGroup);
+
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+            bootstrap.group(bossGroup, workerGroup)
+                    .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel channel) throws Exception {
+                            LOGGER.debug("Initializing channel pipeline for new connection: {}", channel.remoteAddress());
                             ChannelPipeline pipeline = channel.pipeline();
                             // Add RPC codec handlers and provider handler to the pipeline
-                            pipeline.addLast(new RpcDecoder())
-                                    .addLast(new RpcEncoder())
-                                    .addLast(new RpcProviderHandler(reflectType, handlerMap));
+                            pipeline.addLast(new RpcDecoder());
+                            pipeline.addLast(new RpcEncoder());
+                            pipeline.addLast(new RpcProviderHandler(reflectType, handlerMap));
+                            LOGGER.debug("Channel pipeline initialization completed");
                         }
-                    }).option(io.netty.channel.ChannelOption.SO_BACKLOG, 128)
+                    })
+                    .option(io.netty.channel.ChannelOption.SO_BACKLOG, 128)
                     .childOption(io.netty.channel.ChannelOption.SO_KEEPALIVE, true);
 
+            LOGGER.debug("ServerBootstrap configured with channel type: {}, SO_BACKLOG: {}, SO_KEEPALIVE: {}", 
+                    NioServerSocketChannel.class.getSimpleName(), 128, true);
+
             ChannelFuture channelFuture = bootstrap.bind(host, port).sync();
-            LOGGER.info("RPC Provider Server started successfully on {}:{}", host, port);
+            LOGGER.info("RPC Provider Server started successfully on {}:{}, handlerMap size: {}", host, port, handlerMap.size());
+
             channelFuture.channel().closeFuture().sync();
+            LOGGER.debug("Server channel closed");
         } catch (InterruptedException e) {
             LOGGER.error("RPC Provider Server interrupted during operation: {}", e.getMessage(), e);
             Thread.currentThread().interrupt(); // Preserve the interrupted status

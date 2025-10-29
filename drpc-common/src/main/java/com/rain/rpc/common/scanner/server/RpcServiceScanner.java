@@ -3,7 +3,6 @@ package com.rain.rpc.common.scanner.server;
 import com.rain.rpc.annotation.RpcService;
 import com.rain.rpc.common.helper.RpcServiceHelper;
 import com.rain.rpc.common.scanner.ClassScanner;
-import com.rain.rpc.common.scanner.reference.RpcReferenceScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,35 +27,40 @@ public class RpcServiceScanner extends ClassScanner {
      * @throws Exception if any error occurs during class scanning or instantiation
      */
     public static Map<String, Object> doScannerWithRpcServiceAnnotationFilterAndRegistryService(String scanPackage) throws Exception {
+        LOGGER.info("Starting service scanning process for package: {}", scanPackage);
+
         Map<String, Object> handlerMap = new HashMap<>();
         List<String> classNameList = ClassScanner.getClassNameList(scanPackage);
+
         if (classNameList == null || classNameList.isEmpty()) {
+            LOGGER.warn("No classes found in package: {}", scanPackage);
             return handlerMap;
         }
-        classNameList.stream().forEach((className) -> {
+
+        LOGGER.info("Found {} classes in package: {}", classNameList.size(), scanPackage);
+
+        int serviceCount = 0;
+        for (String className : classNameList) {
             try {
                 Class<?> clazz = Class.forName(className);
                 RpcService rpcService = clazz.getAnnotation(RpcService.class);
-                if (rpcService != null) {
-                    // Prioritize using interfaceClass, if interfaceClass name is empty, then use interfaceClassName
-                    // TODO Subsequently, register service metadata with the registry center and record instances of classes annotated with @RpcService in handlerMap
-                    LOGGER.info("Currently annotated @RpcService class instance name: {}", clazz.getName());
-                    LOGGER.info("Properties annotated on @RpcService:");
-                    LOGGER.info("interfaceClass: {}", rpcService.interfaceClass().getName());
-                    LOGGER.info("interfaceClassName: {}", rpcService.interfaceClassName());
-                    LOGGER.info("version: {}", rpcService.version());
-                    LOGGER.info("group: {}", rpcService.group());
 
+                if (rpcService != null) {
                     String serviceName = getServiceName(rpcService);
                     String key = RpcServiceHelper.buildServiceKey(serviceName, rpcService.version(), rpcService.group());
-                    handlerMap.put(key, clazz.newInstance());
-                    // 日志打印handlerMap
-                    LOGGER.info("Currently registered service: {}", handlerMap);
+
+                    Object serviceInstance = clazz.newInstance();
+                    handlerMap.put(key, serviceInstance);
+                    serviceCount++;
+
+                    LOGGER.info("Registered service: {} with key: {}", serviceName, key);
                 }
             } catch (Exception e) {
-                LOGGER.error("Failed to scan classes: {}", e.getMessage(), e);
+                LOGGER.error("Failed to process class: {}", className, e);
             }
-        });
+        }
+
+        LOGGER.info("Service scanning completed. Total registered services: {}", serviceCount);
         return handlerMap;
     }
 

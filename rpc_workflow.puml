@@ -3,6 +3,7 @@ title DRPC Framework Workflow
 
 actor "Client" as client
 participant "Consumer\nApplication" as consumer
+participant "RPC Consumer" as rpcConsumer
 participant "RPC Consumer\nHandler" as consumerHandler
 participant "RPC Encoder" as encoder
 participant "Network" as network
@@ -17,7 +18,10 @@ note right of client
 end note
 
 client -> consumer : Start application
-consumer -> consumerHandler : Channel becomes active
+consumer -> rpcConsumer : Get singleton instance
+rpcConsumer -> consumerHandler : Establish connection to provider
+consumer -> rpcConsumer : Send RPC request
+rpcConsumer -> consumerHandler : Send request via handler
 consumerHandler -> consumerHandler : Create RPC request\nwith RpcHeaderFactory
 consumerHandler -> encoder : Serialize request\nwith specified serialization
 encoder -> network : Send encoded data
@@ -31,7 +35,9 @@ providerHandler -> encoder : Serialize response\nwith specified serialization
 encoder -> network : Send response
 network -> decoder : Receive response
 decoder -> consumerHandler : Pass RpcProtocol<Response>
-consumerHandler -> consumer : Process response
+consumerHandler -> consumerHandler : Match response with request ID
+consumerHandler -> rpcConsumer : Complete RpcFuture
+rpcConsumer -> consumer : Return response result
 
 note left of rpcServer
   RpcSingleServer initializes

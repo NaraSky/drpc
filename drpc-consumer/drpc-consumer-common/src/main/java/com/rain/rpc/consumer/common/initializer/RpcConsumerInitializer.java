@@ -10,19 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RpcConsumerInitializer extends ChannelInitializer<SocketChannel> {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumerInitializer.class);
 
     @Override
     protected void initChannel(SocketChannel channel) throws Exception {
-        LOGGER.debug("Initializing channel pipeline for consumer connection");
         ChannelPipeline cp = channel.pipeline();
-        // Add RPC encoder to serialize outgoing messages
         cp.addLast(new RpcEncoder());
-        // Add RPC decoder to deserialize incoming messages
         cp.addLast(new RpcDecoder());
-        // Add consumer handler to process business logic
         cp.addLast(new RpcConsumerHandler());
-        LOGGER.debug("Channel pipeline initialized successfully with RpcEncoder, RpcDecoder and RpcConsumerHandler");
+        LOGGER.debug("Initialized channel pipeline for consumer");
     }
 }
