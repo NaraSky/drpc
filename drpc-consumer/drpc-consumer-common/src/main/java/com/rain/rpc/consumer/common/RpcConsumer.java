@@ -78,8 +78,8 @@ public class RpcConsumer {
         } else {
             LOGGER.debug("Reusing existing active connection to service provider");
         }
-
-        return handler.sendRequest(protocol);
+        RpcRequest request = protocol.getBody();
+        return handler.sendRequest(protocol, request.isAsync(), request.isOneway());
     }
 
     /**

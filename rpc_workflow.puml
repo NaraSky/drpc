@@ -59,4 +59,46 @@ note right of providerHandler
   Supports multiple reflection types:\n- JDK Reflection\n- CGLIB Reflection\nConfigured via reflectType parameter
 end note
 
+' Relationship between workflow and core classes
+note right of rpcConsumer
+  Instance of RpcConsumer class
+end note
+
+note right of consumerHandler
+  Instance of RpcConsumerHandler class
+end note
+
+note right of encoder
+  Instance of RpcEncoder class
+end note
+
+note right of decoder
+  Instance of RpcDecoder class
+end note
+
+note left of providerHandler
+  Instance of RpcProviderHandler class
+end note
+
+note left of svcScanner
+  Instance of RpcServiceScanner class
+end note
+
+note left of rpcServer
+  Instance of RpcSingleServer class
+end note
+
+' New features for async and oneway calls
+note right of consumer
+  Supports sync, async and oneway calls
+  using RpcContext for async mode
+end note
+
+note right of consumerHandler
+  Handles three types of requests:
+  sync: returns RpcFuture and waits
+  async: stores RpcFuture in RpcContext
+  oneway: sends request without waiting
+end note
+
 @enduml

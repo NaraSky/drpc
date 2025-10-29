@@ -263,4 +263,18 @@ RpcFuture ..> RpcProtocol : uses
 RpcFuture ..> RpcRequest : uses
 RpcFuture ..> RpcResponse : uses
 
+' Workflow relationship
+RpcConsumer ..> rpcConsumer : instance of
+RpcConsumerHandler ..> consumerHandler : instance of
+RpcEncoder ..> encoder : instance of
+RpcDecoder ..> decoder : instance of
+RpcProviderHandler ..> providerHandler : instance of
+RpcServiceScanner ..> svcScanner : instance of
+RpcSingleServer ..> rpcServer : instance of
+
+' New features for async and oneway calls
+RpcContext ..> RpcConsumerHandler : provides async context
+RpcFuture ..> RpcConsumerHandler : enables sync calls
+RpcConsumerHandler ..> RpcFuture : creates for all calls except oneway
+
 @enduml
