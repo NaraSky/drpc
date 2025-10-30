@@ -1,11 +1,12 @@
 package com.rain.rpc.consumer.common;
 
 import com.rain.rpc.common.threadpool.ClientThreadPool;
-import com.rain.rpc.consumer.common.future.RpcFuture;
 import com.rain.rpc.consumer.common.handler.RpcConsumerHandler;
 import com.rain.rpc.consumer.common.initializer.RpcConsumerInitializer;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.request.RpcRequest;
+import com.rain.rpc.proxy.api.consumer.Consumer;
+import com.rain.rpc.proxy.api.future.RpcFuture;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -19,16 +20,16 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages RPC consumer connections and sends requests to RPC providers.
+ * Manages RPC consumer connections and sends requests to providers.
  */
-public class RpcConsumer {
+public class RpcConsumer implements Consumer {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumer.class);
     private static volatile RpcConsumer instance;
     private static Map<String, RpcConsumerHandler> handlerMap = new ConcurrentHashMap<>();
     private final Bootstrap bootstrap;
     private final EventLoopGroup eventLoopGroup;
 
-    // Constructs an RpcConsumer with a configured Netty bootstrap and event loop group
+    // Constructor with Netty bootstrap and event loop group
     private RpcConsumer() {
         bootstrap = new Bootstrap();
         eventLoopGroup = new NioEventLoopGroup(4);
@@ -52,13 +53,14 @@ public class RpcConsumer {
 
     /**
      * Sends an RPC request to the service provider
-     * Manages connection creation/reuse and delegates the actual sending to RpcConsumerHandler
+     * Manages connection creation/reuse and delegates to RpcConsumerHandler
      *
      * @param protocol the RPC protocol containing the request data
      * @return the result of the RPC call
-     * @throws InterruptedException if the connection process is interrupted
+     * @throws Exception if connection fails or other error occurs
      */
-    public RpcFuture sendRequest(RpcProtocol<RpcRequest> protocol) throws InterruptedException {
+    @Override
+    public RpcFuture sendRequest(RpcProtocol<RpcRequest> protocol) throws Exception {
         // TODO Hardcoded for now, will be fetched from registry center in the future
         String serviceAddress = "127.0.0.1";
         int port = 27880;
@@ -84,12 +86,12 @@ public class RpcConsumer {
     }
 
     /**
-     * Gets or creates an RPC consumer handler for the specified service address and port
+     * Gets or creates an RPC consumer handler
      *
      * @param serviceAddress the service provider address
      * @param port           the service provider port
      * @return the RPC consumer handler
-     * @throws InterruptedException if the connection process is interrupted
+     * @throws InterruptedException if connection is interrupted
      */
     public RpcConsumerHandler getRpcConsumerHandler(String serviceAddress, int port) throws InterruptedException {
         LOGGER.info("Establishing connection to service provider at {}:{}", serviceAddress, port);
@@ -106,7 +108,7 @@ public class RpcConsumer {
     }
 
     /**
-     * Closes the RPC consumer and releases all resources
+     * Closes the RPC consumer and releases resources
      */
     public void close() {
         LOGGER.info("Shutting down RPC consumer and event loop group");

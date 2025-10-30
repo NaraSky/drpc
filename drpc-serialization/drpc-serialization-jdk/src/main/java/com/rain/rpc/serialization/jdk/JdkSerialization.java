@@ -10,7 +10,7 @@ public class JdkSerialization implements Serialization {
     @Override
     public <T> byte[] serialize(T obj) {
         if (obj == null) {
-            throw new SerializerException("serialize object is null");
+            throw new SerializerException("Cannot serialize null object");
         }
         try {
             ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -18,21 +18,21 @@ public class JdkSerialization implements Serialization {
             out.writeObject(obj);
             return os.toByteArray();
         } catch (IOException e) {
-            throw new SerializerException(e.getMessage(), e);
+            throw new SerializerException("Serialization failed: " + e.getMessage(), e);
         }
     }
 
     @Override
     public <T> T deserialize(byte[] data, Class<T> cls) {
         if (data == null) {
-            throw new SerializerException("deserialize data is null");
+            throw new SerializerException("Cannot deserialize null data");
         }
         try {
             ByteArrayInputStream is = new ByteArrayInputStream(data);
             ObjectInputStream in = new ObjectInputStream(is);
             return (T) in.readObject();
         } catch (Exception e) {
-            throw new SerializerException(e.getMessage(), e);
+            throw new SerializerException("Deserialization failed: " + e.getMessage(), e);
         }
     }
 }

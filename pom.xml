@@ -18,6 +18,7 @@
         <module>drpc-serialization</module>
         <module>drpc-codec</module>
         <module>drpc-consumer</module>
+        <module>drpc-proxy</module>
     </modules>
 
     <properties>

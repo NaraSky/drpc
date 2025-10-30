@@ -1,10 +1,10 @@
-package com.rain.rpc.consumer.common.future;
+package com.rain.rpc.proxy.api.future;
 
 import com.rain.rpc.common.threadpool.ClientThreadPool;
-import com.rain.rpc.consumer.common.callback.AsyncRpcCallback;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.request.RpcRequest;
 import com.rain.rpc.protocol.response.RpcResponse;
+import com.rain.rpc.proxy.api.callback.AsyncRpcCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.ArrayList;

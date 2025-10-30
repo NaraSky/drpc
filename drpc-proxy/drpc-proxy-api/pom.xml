@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xmlns="http://maven.apache.org/POM/4.0.0"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.rain.rpc.consumer</groupId>
-        <artifactId>drpc-consumer</artifactId>
+        <groupId>com.rain.rpc.proxy</groupId>
+        <artifactId>drpc-proxy</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <groupId>com.rain.rpc.consumer.common</groupId>
-    <artifactId>drpc-consumer-common</artifactId>
+    <groupId>com.rain.rpc.proxy.api</groupId>
+    <artifactId>drpc-proxy-api</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -20,13 +20,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.rain.rpc.codec</groupId>
-            <artifactId>drpc-codec</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.rain.rpc.proxy.jdk</groupId>
-            <artifactId>drpc-proxy-jdk</artifactId>
+            <groupId>com.rain.rpc.protocol</groupId>
+            <artifactId>drpc-protocol</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

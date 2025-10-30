@@ -3,6 +3,9 @@ title DRPC Framework Workflow
 
 actor "Client" as client
 participant "Consumer\nApplication" as consumer
+participant "RPC Client" as rpcClient
+participant "JdkProxyFactory" as jdkProxyFactory
+participant "ObjectProxy" as objectProxy
 participant "RPC Consumer" as rpcConsumer
 participant "RPC Consumer\nHandler" as consumerHandler
 participant "RPC Encoder" as encoder
@@ -18,9 +21,12 @@ note right of client
 end note
 
 client -> consumer : Start application
-consumer -> rpcConsumer : Get singleton instance
+consumer -> rpcClient : Create RPC client
+rpcClient -> jdkProxyFactory : Create proxy factory
+jdkProxyFactory -> objectProxy : Create object proxy
+consumer -> objectProxy : Call service method
+objectProxy -> rpcConsumer : Send RPC request
 rpcConsumer -> consumerHandler : Establish connection to provider
-consumer -> rpcConsumer : Send RPC request
 rpcConsumer -> consumerHandler : Send request via handler
 consumerHandler -> consumerHandler : Create RPC request\nwith RpcHeaderFactory
 consumerHandler -> encoder : Serialize request\nwith specified serialization
@@ -37,7 +43,8 @@ network -> decoder : Receive response
 decoder -> consumerHandler : Pass RpcProtocol<Response>
 consumerHandler -> consumerHandler : Match response with request ID
 consumerHandler -> rpcConsumer : Complete RpcFuture
-rpcConsumer -> consumer : Return response result
+rpcConsumer -> objectProxy : Return RpcFuture
+objectProxy -> consumer : Return response result
 
 note left of rpcServer
   RpcSingleServer initializes
@@ -60,6 +67,18 @@ note right of providerHandler
 end note
 
 ' Relationship between workflow and core classes
+note right of rpcClient
+  Instance of RpcClient class
+end note
+
+note right of jdkProxyFactory
+  Instance of JdkProxyFactory class
+end note
+
+note right of objectProxy
+  Instance of ObjectProxy class
+end note
+
 note right of rpcConsumer
   Instance of RpcConsumer class
 end note
@@ -91,20 +110,20 @@ end note
 ' New features for async and oneway calls
 note right of consumer
   Supports sync, async and oneway calls
-  using RpcContext for async mode
+  using RpcFuture for async mode
 end note
 
 note right of consumerHandler
   Handles three types of requests:
   sync: returns RpcFuture and waits
-  async: stores RpcFuture in RpcContext
+  async: returns RpcFuture with callbacks
   oneway: sends request without waiting
 end note
 
-note right of RpcFuture
-  Implements CompletableFuture<Object>
-  Supports both sync (get) and async (callbacks)
-  Callbacks executed in ClientThreadPool
+note right of objectProxy
+  Implements InvocationHandler
+  Creates RpcProtocol with RpcHeader
+  Uses RpcHeaderFactory for header
 end note
 
 @enduml

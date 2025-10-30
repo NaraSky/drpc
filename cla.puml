@@ -142,6 +142,40 @@ class RpcProviderHandler {
 }
 
 ' Consumer模块
+class RpcClient {
+  -String serviceVersion
+  -String serviceGroup
+  -String serializationType
+  -long timeout
+  -boolean async
+  -boolean oneway
+  +create(Class<T>)
+  +shutdown()
+}
+
+class JdkProxyFactory {
+  -String serviceVersion
+  -String serviceGroup
+  -long timeout
+  -Consumer consumer
+  -String serializationType
+  -boolean async
+  -boolean oneway
+  +getProxy(Class<T>)
+}
+
+class ObjectProxy {
+  -Class<T> clazz
+  -String serviceVersion
+  -String serviceGroup
+  -long timeout
+  -Consumer consumer
+  -String serializationType
+  -boolean async
+  -boolean oneway
+  +invoke(Object, Method, Object[])
+}
+
 class RpcConsumer {
   -Bootstrap bootstrap
   -EventLoopGroup eventLoopGroup
@@ -174,6 +208,8 @@ class RpcFuture {
   -long responseTimeThreshold
   +done(RpcProtocol<RpcResponse>)
   +addCallback(AsyncRpcCallback)
+  +get()
+  +get(long, TimeUnit)
 }
 
 class AsyncRpcCallback {
@@ -259,6 +295,9 @@ RpcProviderHandler ..> RpcResponse : creates
 RpcProviderHandler ..> RpcServiceHelper : uses
 RpcProviderHandler ..> ServerThreadPool : uses
 
+RpcClient ..> JdkProxyFactory : uses
+JdkProxyFactory ..> ObjectProxy : creates
+ObjectProxy ..> RpcConsumer : uses
 RpcConsumer ..> RpcConsumerHandler : uses
 RpcConsumer ..> RpcConsumerInitializer : uses
 RpcConsumerInitializer ..> RpcEncoder : configures
@@ -288,6 +327,9 @@ RpcFuture ..> ClientThreadPool : uses for callbacks
 RpcContext ..> RpcFuture : stores
 
 ' Workflow relationship
+RpcClient ..> rpcClient : instance of
+JdkProxyFactory ..> jdkProxyFactory : instance of
+ObjectProxy ..> objectProxy : instance of
 RpcConsumer ..> rpcConsumer : instance of
 RpcConsumerHandler ..> consumerHandler : instance of
 RpcEncoder ..> encoder : instance of

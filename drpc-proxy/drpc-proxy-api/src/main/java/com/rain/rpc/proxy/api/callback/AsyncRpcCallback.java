@@ -1,4 +1,4 @@
-package com.rain.rpc.consumer.common.callback;
+package com.rain.rpc.proxy.api.callback;
 
 public interface AsyncRpcCallback {
 

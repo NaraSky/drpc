@@ -2,11 +2,11 @@ package com.rain.rpc.test.consumer.handler;
 
 import com.rain.rpc.constants.RpcConstants;
 import com.rain.rpc.consumer.common.RpcConsumer;
-import com.rain.rpc.consumer.common.callback.AsyncRpcCallback;
-import com.rain.rpc.consumer.common.future.RpcFuture;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.header.RpcHeaderFactory;
 import com.rain.rpc.protocol.request.RpcRequest;
+import com.rain.rpc.proxy.api.callback.AsyncRpcCallback;
+import com.rain.rpc.proxy.api.future.RpcFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutionException;
 public class RpcConsumerHandlerTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(RpcConsumerHandlerTest.class);
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
+    public static void main(String[] args) throws Exception {
         RpcConsumer consumer = RpcConsumer.getInstance();
         RpcFuture rpcFuture = consumer.sendRequest(getRpcRequestProtocol());
         rpcFuture.addCallback(new AsyncRpcCallback() {

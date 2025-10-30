@@ -1,6 +1,6 @@
 package com.rain.rpc.consumer.common.context;
 
-import com.rain.rpc.consumer.common.future.RpcFuture;
+import com.rain.rpc.proxy.api.future.RpcFuture;
 
 public class RpcContext {
     public RpcContext() {

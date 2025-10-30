@@ -2,11 +2,11 @@ package com.rain.rpc.consumer.common.handler;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.rain.rpc.consumer.common.context.RpcContext;
-import com.rain.rpc.consumer.common.future.RpcFuture;
 import com.rain.rpc.protocol.RpcProtocol;
 import com.rain.rpc.protocol.header.RpcHeader;
 import com.rain.rpc.protocol.request.RpcRequest;
 import com.rain.rpc.protocol.response.RpcResponse;
+import com.rain.rpc.proxy.api.future.RpcFuture;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
