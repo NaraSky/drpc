@@ -1,23 +1,23 @@
 @startuml
 ' 注解模块
 class RpcReference <<annotation>> {
-  +String version()
-  +String registryType()
-  +String registryAddr()
-  +String loadBalanceType()
-  +String serializationType()
-  +long timeout()
-  +boolean async()
-  +boolean oneway()
-  +String proxy()
-  +String group()
+  +String version() default "1.0.0"
+  +String registryType() default "zookeeper"
+  +String registryAddr() default "127.0.0.1:2181"
+  +String loadBalanceType() default "random"
+  +String serializationType() default "protostuff"
+  +long timeout() default 5000
+  +boolean async() default false
+  +boolean oneway() default false
+  +String proxy() default "jdk"
+  +String group() default "default"
 }
 
 class RpcService <<annotation>> {
-  +Class interfaceClass()
-  +String interfaceClassName()
-  +String version()
-  +String group()
+  +Class<?> interfaceClass() default void.class
+  +String interfaceClassName() default ""
+  +String version() default "1.0.0"
+  +String group() default ""
 }
 
 ' 协议模块
@@ -59,7 +59,7 @@ class RpcResponse {
 }
 
 class RpcHeaderFactory {
-  +getRequestHeader(String)
+  +{static} getRequestHeader(String)
 }
 
 ' 枚举
@@ -80,38 +80,38 @@ interface RpcCodec {
 }
 
 class RpcEncoder {
-  +encode()
+  #encode(ChannelHandlerContext, RpcProtocol<Object>, ByteBuf)
 }
 
 class RpcDecoder {
-  +decode()
+  #decode(ChannelHandlerContext, ByteBuf, List<Object>)
 }
 
 ' 序列化模块
 interface Serialization {
-  +serialize(T)
-  +deserialize(byte[], Class)
+  +<T> serialize(T)
+  +<T> deserialize(byte[], Class<T>)
 }
 
 class JdkSerialization {
-  +serialize(T)
-  +deserialize(byte[], Class)
+  +<T> serialize(T)
+  +<T> deserialize(byte[], Class<T>)
 }
 
 ' 扫描器模块
 class ClassScanner {
-  +getClassNameList(String)
-  -findAndAddClassesInPackageByFile()
-  -findAndAddClassesInPackageByJar()
+  +{static} getClassNameList(String)
+  -{static} findAndAddClassesInPackageByFile(String, String, boolean, List<String>)
+  -{static} findAndAddClassesInPackageByJar(String, List<String>, boolean, String, URL)
 }
 
 class RpcServiceScanner {
-  +doScannerWithRpcServiceAnnotationFilterAndRegistryService(String)
-  -getServiceName(RpcService)
+  +{static} doScannerWithRpcServiceAnnotationFilterAndRegistryService(String)
+  -{static} getServiceName(RpcService)
 }
 
 class RpcReferenceScanner {
-  +doScannerWithRpcReferenceAnnotationFilter(String)
+  +{static} doScannerWithRpcReferenceAnnotationFilter(String)
 }
 
 ' Provider模块
@@ -122,8 +122,9 @@ interface Server {
 class BaseServer {
   #String host
   #int port
-  #Map handlerMap
+  #Map<String, Object> handlerMap
   -String reflectType
+  +BaseServer(String, String)
   +startNettyServer()
 }
 
@@ -132,13 +133,15 @@ class RpcSingleServer {
 }
 
 class RpcProviderHandler {
-  -Map handlerMap
+  -Map<String, Object> handlerMap
   -String reflectType
-  #channelRead0()
+  +RpcProviderHandler(String, Map<String, Object>)
+  #channelRead0(ChannelHandlerContext, RpcProtocol<RpcRequest>)
   -handle(RpcRequest)
-  -invokeMethod()
-  -invokeJDKMethod()
-  -invokeCGLIBMethod()
+  -invokeMethod(Object, Class<?>, String, Class<?>[], Object[])
+  -invokeJDKMethod(Object, Class<?>, String, Class<?>[], Object[])
+  -invokeCGLibMethod(Object, Class<?>, String, Class<?>[], Object[])
+  +exceptionCaught(ChannelHandlerContext, Throwable)
 }
 
 ' Consumer模块
@@ -149,19 +152,36 @@ class RpcClient {
   -long timeout
   -boolean async
   -boolean oneway
+  +RpcClient(String, String, String, long, boolean, boolean)
   +create(Class<T>)
+  +createAsync(Class<T>)
   +shutdown()
 }
 
 class JdkProxyFactory {
+  +<T> getProxy(Class<T>)
+}
+
+class BaseProxyFactory {
+  #ObjectProxy objectProxy
+  +init(ProxyConfig<T>)
+}
+
+class ProxyConfig {
+  -Class<?> clazz
   -String serviceVersion
   -String serviceGroup
+  -String serializationType
   -long timeout
   -Consumer consumer
-  -String serializationType
   -boolean async
   -boolean oneway
-  +getProxy(Class<T>)
+  +ProxyConfig(Class<?>, String, String, String, long, Consumer, boolean, boolean)
+}
+
+interface ProxyFactory {
+  +init(ProxyConfig<T>)
+  +<T> getProxy(Class<T>)
 }
 
 class ObjectProxy {
@@ -173,24 +193,42 @@ class ObjectProxy {
   -String serializationType
   -boolean async
   -boolean oneway
+  +ObjectProxy(Class<T>)
+  +ObjectProxy(Class<T>, String, String, String, long, Consumer, boolean, boolean)
   +invoke(Object, Method, Object[])
+  +call(String, Object...)
+  -createRequest(String, String, Object[])
+  -getClassType(Object)
+}
+
+interface IAsyncObjectProxy {
+  +call(String, Object...)
+}
+
+interface Consumer {
+  +sendRequest(RpcProtocol<RpcRequest>)
 }
 
 class RpcConsumer {
   -Bootstrap bootstrap
   -EventLoopGroup eventLoopGroup
-  -Map handlerMap
-  +sendRequest(RpcProtocol)
-  +getRpcConsumerHandler()
+  -Map<String, RpcConsumerHandler> handlerMap
+  +sendRequest(RpcProtocol<RpcRequest>)
+  +getRpcConsumerHandler(String, int)
   +getInstance()
+  +close()
 }
 
 class RpcConsumerHandler {
   -Channel channel
   -SocketAddress remotePeer
-  -Map pendingRPC
-  #channelRead0()
-  +sendRequest(RpcProtocol)
+  -Map<Long, RpcFuture> pendingRPC
+  #channelRead0(ChannelHandlerContext, RpcProtocol<RpcResponse>)
+  +sendRequest(RpcProtocol<RpcRequest>, boolean, boolean)
+  +sendRequestSync(RpcProtocol<RpcRequest>)
+  -sendRequestAsync(RpcProtocol<RpcRequest>)
+  -sendRequestOneway(RpcProtocol<RpcRequest>)
+  -getRpcFuture(RpcProtocol<RpcRequest>)
   +getChannel()
   +getRemotePeer()
   +close()
@@ -206,10 +244,18 @@ class RpcFuture {
   -RpcProtocol<RpcResponse> responseRpcProtocol
   -long startTime
   -long responseTimeThreshold
-  +done(RpcProtocol<RpcResponse>)
-  +addCallback(AsyncRpcCallback)
+  -List<AsyncRpcCallback> pendingCallbacks
+  -ReentrantLock lock
+  +RpcFuture(RpcProtocol<RpcRequest>)
+  +isDone()
   +get()
   +get(long, TimeUnit)
+  +isCancelled()
+  +cancel(boolean)
+  +done(RpcProtocol<RpcResponse>)
+  +addCallback(AsyncRpcCallback)
+  -runCallback(AsyncRpcCallback)
+  -invokeCallbacks()
 }
 
 class AsyncRpcCallback {
@@ -218,39 +264,40 @@ class AsyncRpcCallback {
 }
 
 class RpcContext {
+  -{static} ThreadLocal<RpcContext> RPC_CONTEXT
+  -RpcFuture rpcFuture
   -RpcContext()
-  +getContext()
+  +{static} getContext()
   +setRpcFuture(RpcFuture)
   +getRpcFuture()
-  +clear()
 }
 
 ' 工具类
 class RpcServiceHelper {
-  +buildServiceKey(String, String, String)
+  +{static} buildServiceKey(String, String, String)
 }
 
 class IdFactory {
-  -AtomicLong REQUEST_ID
-  +getRequestId()
+  -{static} AtomicLong REQUEST_ID
+  +{static} getRequestId()
 }
 
 class ServerThreadPool {
-  -ThreadPoolExecutor threadPoolExecutor
-  +submit(Runnable)
-  +shutdown()
+  -{static} ThreadPoolExecutor threadPoolExecutor
+  +{static} submit(Runnable)
+  +{static} shutdown()
 }
 
 class ClientThreadPool {
-  -ThreadPoolExecutor threadPoolExecutor
-  +submit(Runnable)
-  +shutdown()
+  -{static} ThreadPoolExecutor threadPoolExecutor
+  +{static} submit(Runnable)
+  +{static} shutdown()
 }
 
 class SerializationUtils {
-  +paddingString(String)
-  +subString(String)
-  +transNullToEmpty(String)
+  +{static} int MAX_SERIALIZATION_TYPE_COUNT
+  +{static} paddingString(String)
+  +{static} subString(String)
 }
 
 class RpcConstants <<constants>> {
@@ -295,9 +342,16 @@ RpcProviderHandler ..> RpcResponse : creates
 RpcProviderHandler ..> RpcServiceHelper : uses
 RpcProviderHandler ..> ServerThreadPool : uses
 
+JdkProxyFactory --|> BaseProxyFactory
+JdkProxyFactory ..|> ProxyFactory
+BaseProxyFactory ..> ProxyConfig : uses
+BaseProxyFactory ..> ObjectProxy : contains
+ObjectProxy ..|> IAsyncObjectProxy
+ObjectProxy ..|> InvocationHandler
 RpcClient ..> JdkProxyFactory : uses
-JdkProxyFactory ..> ObjectProxy : creates
-ObjectProxy ..> RpcConsumer : uses
+RpcClient ..> ProxyConfig : creates
+ObjectProxy ..> Consumer : uses
+RpcConsumer ..|> Consumer
 RpcConsumer ..> RpcConsumerHandler : uses
 RpcConsumer ..> RpcConsumerInitializer : uses
 RpcConsumerInitializer ..> RpcEncoder : configures
@@ -326,21 +380,21 @@ RpcFuture ..> ClientThreadPool : uses for callbacks
 
 RpcContext ..> RpcFuture : stores
 
-' Workflow relationship
-RpcClient ..> rpcClient : instance of
-JdkProxyFactory ..> jdkProxyFactory : instance of
-ObjectProxy ..> objectProxy : instance of
-RpcConsumer ..> rpcConsumer : instance of
-RpcConsumerHandler ..> consumerHandler : instance of
-RpcEncoder ..> encoder : instance of
-RpcDecoder ..> decoder : instance of
-RpcProviderHandler ..> providerHandler : instance of
-RpcServiceScanner ..> svcScanner : instance of
-RpcSingleServer ..> rpcServer : instance of
+class RpcConsumerInitializer {
+  #initChannel(SocketChannel)
+}
 
-' New features for async and oneway calls
-RpcContext ..> RpcConsumerHandler : provides async context
-RpcFuture ..> RpcConsumerHandler : enables sync calls
-RpcConsumerHandler ..> RpcFuture : creates for all calls except oneway
+' Additional relationships
+RpcConsumerInitializer ..> RpcEncoder : configures
+RpcConsumerInitializer ..> RpcDecoder : configures
+RpcConsumerInitializer ..> RpcConsumerHandler : configures
+RpcConsumer ..> RpcConsumerInitializer : uses
+
+' Context and Future relationships
+RpcContext ..> RpcFuture : stores
+RpcConsumerHandler ..> RpcContext : uses for async
+RpcFuture ..> AsyncRpcCallback : manages
+ObjectProxy ..> RpcHeaderFactory : uses
+ObjectProxy ..> RpcProtocol : creates
 
 @enduml
