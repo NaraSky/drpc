@@ -12,6 +12,7 @@ public abstract class BaseProxyFactory<T> implements ProxyFactory {
                 proxyConfig.getServiceGroup(),
                 proxyConfig.getSerializationType(),
                 proxyConfig.getTimeout(),
+                proxyConfig.getRegistryService(),
                 proxyConfig.getConsumer(),
                 proxyConfig.getAsync(),
                 proxyConfig.getOneway());

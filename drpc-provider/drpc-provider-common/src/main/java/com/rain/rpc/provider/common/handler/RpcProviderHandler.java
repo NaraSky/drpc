@@ -34,14 +34,18 @@ public class RpcProviderHandler extends SimpleChannelInboundHandler<RpcProtocol<
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, RpcProtocol<RpcRequest> protocol) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, RpcProtocol<RpcRequest> protocol) {
         ServerThreadPool.submit(() -> {
             RpcHeader header = protocol.getHeader();
             header.setMessageType((byte) RpcType.RESPONSE.getType());
             RpcRequest request = protocol.getBody();
-            logger.debug("Receive request " + header.getRequestId());
-            RpcProtocol<RpcResponse> responseRpcProtocol = new RpcProtocol<RpcResponse>();
+            
+            logger.debug("Request received - ID: {}, method: {}#{}", 
+                header.getRequestId(), request.getClassName(), request.getMethodName());
+            
+            RpcProtocol<RpcResponse> responseProtocol = new RpcProtocol<>();
             RpcResponse response = new RpcResponse();
+            
             try {
                 Object result = handle(request);
                 response.setResult(result);
@@ -51,79 +55,59 @@ public class RpcProviderHandler extends SimpleChannelInboundHandler<RpcProtocol<
             } catch (Throwable t) {
                 response.setError(t.toString());
                 header.setStatus((byte) RpcStatus.FAIL.getCode());
-                logger.error("RPC Server handle request error", t);
+                logger.error("Request handling failed - ID: {}", header.getRequestId(), t);
             }
-            responseRpcProtocol.setHeader(header);
-            responseRpcProtocol.setBody(response);
-            ctx.writeAndFlush(responseRpcProtocol).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                    logger.debug("Send response for request " + header.getRequestId());
+            
+            responseProtocol.setHeader(header);
+            responseProtocol.setBody(response);
+            ctx.writeAndFlush(responseProtocol).addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    logger.debug("Response sent - ID: {}", header.getRequestId());
                 }
             });
         });
     }
 
     private Object handle(RpcRequest request) throws Throwable {
-        String serviceKey = RpcServiceHelper.buildServiceKey(request.getClassName(), request.getVersion(), request.getGroup());
+        String serviceKey = RpcServiceHelper.buildServiceKey(
+            request.getClassName(), request.getVersion(), request.getGroup());
         Object serviceBean = handlerMap.get(serviceKey);
+        
         if (serviceBean == null) {
-            throw new RuntimeException(String.format("service not exist: %s:%s", request.getClassName(), request.getMethodName()));
+            throw new RuntimeException(String.format("Service not found: %s#%s", 
+                request.getClassName(), request.getMethodName()));
         }
 
-        Class<?> serviceClass = serviceBean.getClass();
-        String methodName = request.getMethodName();
-        Class<?>[] parameterTypes = request.getParameterTypes();
-        Object[] parameters = request.getParameters();
-
-        logger.debug("Service class: " + serviceClass.getName());
-        logger.debug("Method name: " + methodName);
-        if (parameterTypes != null && parameterTypes.length > 0) {
-            for (int i = 0; i < parameterTypes.length; ++i) {
-                logger.debug("Parameter type: " + parameterTypes[i].getName());
-            }
-        }
-
-        if (parameters != null && parameters.length > 0) {
-            for (int i = 0; i < parameters.length; ++i) {
-                logger.debug("Parameter value: " + parameters[i].toString());
-            }
-        }
-        return invokeMethod(serviceBean, serviceClass, methodName, parameterTypes, parameters);
+        return invokeMethod(serviceBean, serviceBean.getClass(), 
+            request.getMethodName(), request.getParameterTypes(), request.getParameters());
     }
 
-    private Object invokeMethod(Object serviceBean, Class<?> serviceClass, String methodName, Class<?>[] parameterTypes, Object[] parameters) throws Throwable {
+    private Object invokeMethod(Object bean, Class<?> clazz, String method, 
+                               Class<?>[] paramTypes, Object[] params) throws Throwable {
         switch (this.reflectType) {
             case RpcConstants.REFLECT_TYPE_JDK:
-                return this.invokeJDKMethod(serviceBean, serviceClass, methodName, parameterTypes, parameters);
+                return invokeJDKMethod(bean, clazz, method, paramTypes, params);
             case RpcConstants.REFLECT_TYPE_CGLIB:
-                return this.invokeCGLibMethod(serviceBean, serviceClass, methodName, parameterTypes, parameters);
+                return invokeCGLibMethod(bean, clazz, method, paramTypes, params);
             default:
-                throw new IllegalArgumentException("not support reflect type");
+                throw new IllegalArgumentException("Unsupported reflect type: " + reflectType);
         }
     }
 
-
-    /**
-     * CGLib proxy approach
-     */
-    private Object invokeCGLibMethod(Object serviceBean, Class<?> serviceClass, String methodName, Class<?>[] parameterTypes, Object[] parameters) throws Throwable {
-        // Cglib reflect
-        logger.info("Use CGLib reflection type to invoke method...");
-        FastClass serviceFastClass = FastClass.create(serviceClass);
-        FastMethod serviceFastMethod = serviceFastClass.getMethod(methodName, parameterTypes);
-        return serviceFastMethod.invoke(serviceBean, parameters);
+    private Object invokeCGLibMethod(Object bean, Class<?> clazz, String method, 
+                                    Class<?>[] paramTypes, Object[] params) throws Throwable {
+        logger.debug("Invoking via CGLIB - {}#{}", clazz.getName(), method);
+        FastClass fastClass = FastClass.create(clazz);
+        FastMethod fastMethod = fastClass.getMethod(method, paramTypes);
+        return fastMethod.invoke(bean, params);
     }
 
-    /**
-     * JDK proxy approach
-     */
-    private Object invokeJDKMethod(Object serviceBean, Class<?> serviceClass, String methodName, Class<?>[] parameterTypes, Object[] parameters) throws Throwable {
-        // JDK reflect
-        logger.info("Use JDK reflection type to invoke method...");
-        Method method = serviceClass.getMethod(methodName, parameterTypes);
-        method.setAccessible(true);
-        return method.invoke(serviceBean, parameters);
+    private Object invokeJDKMethod(Object bean, Class<?> clazz, String method, 
+                                  Class<?>[] paramTypes, Object[] params) throws Throwable {
+        logger.debug("Invoking via JDK reflection - {}#{}", clazz.getName(), method);
+        Method m = clazz.getMethod(method, paramTypes);
+        m.setAccessible(true);
+        return m.invoke(bean, params);
     }
 
     @Override

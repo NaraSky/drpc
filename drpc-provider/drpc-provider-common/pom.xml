@@ -24,6 +24,11 @@
             <artifactId>drpc-codec</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.rain.rpc.registry.zookeeper</groupId>
+            <artifactId>drpc-registry-zookeeper</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

@@ -50,25 +50,29 @@ public class RpcConsumerHandler extends SimpleChannelInboundHandler<RpcProtocol<
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcProtocol<RpcResponse> protocol) throws Exception {
-        if (protocol == null) {
-            return;
-        }
-        logger.info("Consumer received data===>>>{}", JSONObject.toJSONString(protocol));
+    protected void channelRead0(ChannelHandlerContext ctx, RpcProtocol<RpcResponse> protocol) {
+        if (protocol == null) return;
+        
         RpcHeader header = protocol.getHeader();
         long requestId = header.getRequestId();
+        
+        logger.debug("Response received - ID: {}, status: {}", requestId, header.getStatus());
+        
         RpcFuture rpcFuture = pendingRPC.remove(requestId);
         if (rpcFuture != null) {
             rpcFuture.done(protocol);
+        } else {
+            logger.warn("No pending request found for ID: {}", requestId);
         }
     }
 
-    /**
-     * Send request from service consumer to service provider
-     */
     public RpcFuture sendRequest(RpcProtocol<RpcRequest> protocol, boolean isAsync, boolean isOneway) {
-        logger.info("Consumer sent data===>>>{}", JSONObject.toJSONString(protocol));
-        return isOneway ? sendRequestOneway(protocol) : isAsync ? sendRequestAsync(protocol) : sendRequestSync(protocol);
+        long requestId = protocol.getHeader().getRequestId();
+        logger.debug("Sending request - ID: {}, async: {}, oneway: {}", requestId, isAsync, isOneway);
+        
+        return isOneway ? sendRequestOneway(protocol) 
+            : isAsync ? sendRequestAsync(protocol) 
+            : sendRequestSync(protocol);
     }
 
     public RpcFuture sendRequestSync(RpcProtocol<RpcRequest> protocol) {

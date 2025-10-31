@@ -1,12 +1,16 @@
 package com.rain.rpc.consumer.common;
 
+import com.rain.rpc.common.helper.RpcServiceHelper;
 import com.rain.rpc.common.threadpool.ClientThreadPool;
 import com.rain.rpc.consumer.common.handler.RpcConsumerHandler;
+import com.rain.rpc.consumer.common.helper.RpcConsumerHandlerHelper;
 import com.rain.rpc.consumer.common.initializer.RpcConsumerInitializer;
 import com.rain.rpc.protocol.RpcProtocol;
+import com.rain.rpc.protocol.meta.ServiceMeta;
 import com.rain.rpc.protocol.request.RpcRequest;
 import com.rain.rpc.proxy.api.consumer.Consumer;
 import com.rain.rpc.proxy.api.future.RpcFuture;
+import com.rain.rpc.registry.api.RegistryService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -51,67 +55,55 @@ public class RpcConsumer implements Consumer {
         return instance;
     }
 
-    /**
-     * Sends an RPC request to the service provider
-     * Manages connection creation/reuse and delegates to RpcConsumerHandler
-     *
-     * @param protocol the RPC protocol containing the request data
-     * @return the result of the RPC call
-     * @throws Exception if connection fails or other error occurs
-     */
     @Override
-    public RpcFuture sendRequest(RpcProtocol<RpcRequest> protocol) throws Exception {
-        // TODO Hardcoded for now, will be fetched from registry center in the future
-        String serviceAddress = "127.0.0.1";
-        int port = 27880;
-        String key = serviceAddress.concat("_").concat(String.valueOf(port));
-
-        LOGGER.debug("Target service address: {}:{}", serviceAddress, port);
-        RpcConsumerHandler handler = handlerMap.get(key);
-
-        if (handler == null) {
-            LOGGER.debug("No existing connection, creating new connection to service provider");
-            handler = getRpcConsumerHandler(serviceAddress, port);
-            handlerMap.put(key, handler);
-        } else if (!handler.getChannel().isActive()) {
-            LOGGER.warn("Inactive connection to {}:{}, creating new connection", serviceAddress, port);
-            handler.close();
-            handler = getRpcConsumerHandler(serviceAddress, port);
-            handlerMap.put(key, handler);
-        } else {
-            LOGGER.debug("Reusing existing active connection to service provider");
-        }
+    public RpcFuture sendRequest(RpcProtocol<RpcRequest> protocol, RegistryService registryService) throws Exception {
         RpcRequest request = protocol.getBody();
+        String serviceKey = RpcServiceHelper.buildServiceKey(
+            request.getClassName(), request.getVersion(), request.getGroup());
+        
+        Object[] params = request.getParameters();
+        int invokerHashCode = (params == null || params.length == 0) 
+            ? serviceKey.hashCode() : params[0].hashCode();
+        
+        ServiceMeta serviceMeta = registryService.discovery(serviceKey, invokerHashCode);
+        if (serviceMeta == null) {
+            LOGGER.error("Service not found: {}", serviceKey);
+            return null;
+        }
+        
+        RpcConsumerHandler handler = RpcConsumerHandlerHelper.get(serviceMeta);
+        
+        if (handler == null) {
+            handler = getRpcConsumerHandler(serviceMeta.getServiceAddr(), serviceMeta.getServicePort());
+            RpcConsumerHandlerHelper.put(serviceMeta, handler);
+        } else if (!handler.getChannel().isActive()) {
+            LOGGER.warn("Connection inactive, reconnecting to {}:{}", 
+                serviceMeta.getServiceAddr(), serviceMeta.getServicePort());
+            handler.close();
+            handler = getRpcConsumerHandler(serviceMeta.getServiceAddr(), serviceMeta.getServicePort());
+            RpcConsumerHandlerHelper.put(serviceMeta, handler);
+        }
+        
         return handler.sendRequest(protocol, request.isAsync(), request.isOneway());
     }
 
-    /**
-     * Gets or creates an RPC consumer handler
-     *
-     * @param serviceAddress the service provider address
-     * @param port           the service provider port
-     * @return the RPC consumer handler
-     * @throws InterruptedException if connection is interrupted
-     */
-    public RpcConsumerHandler getRpcConsumerHandler(String serviceAddress, int port) throws InterruptedException {
-        LOGGER.info("Establishing connection to service provider at {}:{}", serviceAddress, port);
-        ChannelFuture channelFuture = bootstrap.connect(serviceAddress, port).sync();
+    public RpcConsumerHandler getRpcConsumerHandler(String address, int port) throws InterruptedException {
+        LOGGER.info("Connecting to {}:{}", address, port);
+        ChannelFuture channelFuture = bootstrap.connect(address, port).sync();
         channelFuture.addListener((ChannelFutureListener) listener -> {
             if (listener.isSuccess()) {
-                LOGGER.info("Successfully connected to service provider at {}:{}", serviceAddress, port);
+                LOGGER.info("Connected to {}:{}", address, port);
             } else {
-                LOGGER.error("Failed to connect to service provider at {}:{}", serviceAddress, port, listener.cause());
+                LOGGER.error("Connection failed to {}:{}", address, port, listener.cause());
                 eventLoopGroup.shutdownGracefully();
             }
         });
-       return channelFuture.channel().pipeline().get(RpcConsumerHandler.class);
+        return channelFuture.channel().pipeline().get(RpcConsumerHandler.class);
     }
 
-    /**
-     * Closes the RPC consumer and releases resources
-     */
     public void close() {
-        LOGGER.info("Shutting down RPC consumer and event loop group");
+        LOGGER.info("Shutting down RPC consumer");
+        RpcConsumerHandlerHelper.closeRpcClientHandler();
         eventLoopGroup.shutdownGracefully();
         ClientThreadPool.shutdown();
     }

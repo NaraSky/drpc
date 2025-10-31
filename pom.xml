@@ -19,6 +19,8 @@
         <module>drpc-codec</module>
         <module>drpc-consumer</module>
         <module>drpc-proxy</module>
+        <module>drpc-registry</module>
+        <module>drpc-loadbalancer</module>
     </modules>
 
     <properties>

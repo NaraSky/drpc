@@ -20,8 +20,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.rain.rpc.common</groupId>
-            <artifactId>drpc-common</artifactId>
+            <groupId>com.rain.rpc.provider.common</groupId>
+            <artifactId>drpc-provider-common</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

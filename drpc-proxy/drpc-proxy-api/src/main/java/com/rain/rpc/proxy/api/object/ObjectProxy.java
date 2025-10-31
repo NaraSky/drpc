@@ -6,6 +6,7 @@ import com.rain.rpc.protocol.request.RpcRequest;
 import com.rain.rpc.proxy.api.async.IAsyncObjectProxy;
 import com.rain.rpc.proxy.api.consumer.Consumer;
 import com.rain.rpc.proxy.api.future.RpcFuture;
+import com.rain.rpc.registry.api.RegistryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,42 +14,48 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.concurrent.TimeUnit;
 
-public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
+public class ObjectProxy<T> implements IAsyncObjectProxy, InvocationHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ObjectProxy.class);
 
     /**
-     * Interface class
+     * 接口的Class对象
      */
     private Class<T> clazz;
 
     /**
-     * Service version
+     * 服务版本号
      */
     private String serviceVersion;
     /**
-     * Service group
+     * 服务分组
      */
     private String serviceGroup;
     /**
-     * Request timeout in milliseconds, default 15s
+     * 超时时间，默认15s
      */
     private long timeout = 15000;
+
     /**
-     * Service consumer
+     * 注册服务
+     */
+    private RegistryService registryService;
+
+    /**
+     * 服务消费者
      */
     private Consumer consumer;
     /**
-     * Serialization type
+     * 序列化类型
      */
     private String serializationType;
 
     /**
-     * Whether to call asynchronously
+     * 是否异步调用
      */
     private boolean async;
 
     /**
-     * Whether to call one-way
+     * 是否单向调用
      */
     private boolean oneway;
 
@@ -56,7 +63,7 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
         this.clazz = clazz;
     }
 
-    public ObjectProxy(Class<T> clazz, String serviceVersion, String serviceGroup, String serializationType, long timeout, Consumer consumer, boolean async, boolean oneway) {
+    public ObjectProxy(Class<T> clazz, String serviceVersion, String serviceGroup, String serializationType, long timeout, RegistryService registryService, Consumer consumer, boolean async, boolean oneway) {
         this.clazz = clazz;
         this.serviceVersion = serviceVersion;
         this.timeout = timeout;
@@ -65,6 +72,7 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
         this.serializationType = serializationType;
         this.async = async;
         this.oneway = oneway;
+        this.registryService = registryService;
     }
 
     @Override
@@ -76,7 +84,9 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
             } else if ("hashCode".equals(name)) {
                 return System.identityHashCode(proxy);
             } else if ("toString".equals(name)) {
-                return proxy.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(proxy)) + ", with InvocationHandler " + this;
+                return proxy.getClass().getName() + "@" +
+                        Integer.toHexString(System.identityHashCode(proxy)) +
+                        ", with InvocationHandler " + this;
             } else {
                 throw new IllegalStateException(String.valueOf(method));
             }
@@ -96,41 +106,51 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
         request.setOneway(oneway);
         requestRpcProtocol.setBody(request);
 
-        LOGGER.debug("Calling method: {}#{}", method.getDeclaringClass().getName(), method.getName());
+        // Debug
+        LOGGER.debug(method.getDeclaringClass().getName());
+        LOGGER.debug(method.getName());
 
         if (method.getParameterTypes() != null && method.getParameterTypes().length > 0) {
-            LOGGER.debug("Parameter types: {}", (Object) method.getParameterTypes());
+            for (int i = 0; i < method.getParameterTypes().length; ++i) {
+                LOGGER.debug(method.getParameterTypes()[i].getName());
+            }
         }
 
         if (args != null && args.length > 0) {
-            LOGGER.debug("Arguments: {}", args);
+            for (int i = 0; i < args.length; ++i) {
+                LOGGER.debug(args[i].toString());
+            }
         }
 
-        RpcFuture rpcFuture = this.consumer.sendRequest(requestRpcProtocol);
+        RpcFuture rpcFuture = this.consumer.sendRequest(requestRpcProtocol, registryService);
         return rpcFuture == null ? null : timeout > 0 ? rpcFuture.get(timeout, TimeUnit.MILLISECONDS) : rpcFuture.get();
     }
 
     @Override
-    public RpcFuture call(String methodName, Object... args) {
-        RpcProtocol<RpcRequest> requestRpcProtocol = createRequest(this.clazz.getName(), methodName, args);
+    public RpcFuture call(String funcName, Object... args) {
+        RpcProtocol<RpcRequest> request = createRequest(this.clazz.getName(), funcName, args);
         RpcFuture rpcFuture = null;
         try {
-            rpcFuture = this.consumer.sendRequest(requestRpcProtocol);
+            rpcFuture = this.consumer.sendRequest(request, registryService);
         } catch (Exception e) {
-            LOGGER.error("Asynchronous call throws exception: {}", e);
+            LOGGER.error("async all throws exception:{}", e);
         }
         return rpcFuture;
     }
 
     private RpcProtocol<RpcRequest> createRequest(String className, String methodName, Object[] args) {
+
         RpcProtocol<RpcRequest> requestRpcProtocol = new RpcProtocol<RpcRequest>();
+
         requestRpcProtocol.setHeader(RpcHeaderFactory.getRequestHeader(serializationType));
+
         RpcRequest request = new RpcRequest();
         request.setClassName(className);
         request.setMethodName(methodName);
         request.setParameters(args);
         request.setVersion(this.serviceVersion);
         request.setGroup(this.serviceGroup);
+
         Class[] parameterTypes = new Class[args.length];
         // Get the right class type
         for (int i = 0; i < args.length; i++) {
@@ -138,6 +158,7 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
         }
         request.setParameterTypes(parameterTypes);
         requestRpcProtocol.setBody(request);
+
         LOGGER.debug(className);
         LOGGER.debug(methodName);
         for (int i = 0; i < parameterTypes.length; ++i) {
@@ -146,6 +167,7 @@ public class ObjectProxy<T> implements InvocationHandler, IAsyncObjectProxy {
         for (int i = 0; i < args.length; ++i) {
             LOGGER.debug(args[i].toString());
         }
+
         return requestRpcProtocol;
     }
 

@@ -16,10 +16,12 @@ public class RpcSingleServerTest {
     @Test
     public void startRpcSingleServer() {
         // Create RPC server instance with specified host, port and service package
-        String serverAddress = "127.0.0.1:27880";
+        String serverAddress = "117.72.33.162:27880";
+        String registryAddress = "117.72.33.162:2181";
+        String registryType = "zookeeper";
         String servicePackage = "com.rain.rpc.test";
         String reflectType = "cglib";
-        RpcSingleServer singleServer = new RpcSingleServer(serverAddress, servicePackage, reflectType);
+        RpcSingleServer singleServer = new RpcSingleServer(serverAddress, registryAddress, registryType, servicePackage, reflectType);
 
         // Start the Netty server
         singleServer.startNettyServer();

@@ -1,8 +1,10 @@
-package com.rain.rpc.common.scanner.server;
+package com.rain.rpc.provider.common.scanner;
 
 import com.rain.rpc.annotation.RpcService;
 import com.rain.rpc.common.helper.RpcServiceHelper;
 import com.rain.rpc.common.scanner.ClassScanner;
+import com.rain.rpc.protocol.meta.ServiceMeta;
+import com.rain.rpc.registry.api.RegistryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +28,7 @@ public class RpcServiceScanner extends ClassScanner {
      * @return a map containing the service instances with their keys
      * @throws Exception if any error occurs during class scanning or instantiation
      */
-    public static Map<String, Object> doScannerWithRpcServiceAnnotationFilterAndRegistryService(String scanPackage) throws Exception {
+    public static Map<String, Object> doScannerWithRpcServiceAnnotationFilterAndRegistryService(String host, int port, String scanPackage, RegistryService registryService) throws Exception {
         LOGGER.info("Starting service scanning process for package: {}", scanPackage);
 
         Map<String, Object> handlerMap = new HashMap<>();
@@ -39,28 +41,23 @@ public class RpcServiceScanner extends ClassScanner {
 
         LOGGER.info("Found {} classes in package: {}", classNameList.size(), scanPackage);
 
-        int serviceCount = 0;
         for (String className : classNameList) {
             try {
                 Class<?> clazz = Class.forName(className);
                 RpcService rpcService = clazz.getAnnotation(RpcService.class);
 
                 if (rpcService != null) {
-                    String serviceName = getServiceName(rpcService);
-                    String key = RpcServiceHelper.buildServiceKey(serviceName, rpcService.version(), rpcService.group());
-
-                    Object serviceInstance = clazz.newInstance();
-                    handlerMap.put(key, serviceInstance);
-                    serviceCount++;
-
-                    LOGGER.info("Registered service: {} with key: {}", serviceName, key);
+                    //优先使用interfaceClass, interfaceClass的name为空，再使用interfaceClassName
+                    ServiceMeta serviceMeta = new ServiceMeta(getServiceName(rpcService), rpcService.version(), host, port, rpcService.group());
+                    //将元数据注册到注册中心
+                    registryService.register(serviceMeta);
+                    handlerMap.put(RpcServiceHelper.buildServiceKey(serviceMeta.getServiceName(), serviceMeta.getServiceVersion(), serviceMeta.getServiceGroup()), clazz.newInstance());
                 }
             } catch (Exception e) {
                 LOGGER.error("Failed to process class: {}", className, e);
             }
         }
 
-        LOGGER.info("Service scanning completed. Total registered services: {}", serviceCount);
         return handlerMap;
     }
 

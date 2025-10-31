@@ -1,7 +1,7 @@
 @startuml
-title DRPC Framework Workflow - 完整调用流程
+title DRPC Framework Workflow
 
-actor "客户端应用" as client
+actor "Client App" as client
 participant "RpcClient" as rpcClient
 participant "JdkProxyFactory" as jdkProxyFactory
 participant "ObjectProxy" as objectProxy
@@ -9,147 +9,158 @@ participant "RpcHeaderFactory" as headerFactory
 participant "RpcConsumer" as rpcConsumer
 participant "RpcConsumerHandler" as consumerHandler
 participant "RpcEncoder" as encoder
-participant "Netty 网络层" as network
+participant "Netty Network" as network
 participant "RpcDecoder" as decoder
 participant "RpcProviderHandler" as providerHandler
 participant "ServerThreadPool" as threadPool
-participant "服务实例" as serviceBean
+participant "Service Bean" as serviceBean
 participant "RpcSingleServer" as rpcServer
 participant "RpcServiceScanner" as svcScanner
 
-== 服务端启动阶段 ==
+== Provider Startup Phase ==
 
-rpcServer -> rpcServer : 初始化服务器\n(host:port, scanPackage, reflectType)
-rpcServer -> svcScanner : 扫描服务包
-svcScanner -> svcScanner : 查找 @RpcService 注解的类
-svcScanner -> svcScanner : 创建服务实例
-svcScanner -> svcScanner : 构建服务键\n(接口名#版本#分组)
-svcScanner --> rpcServer : 返回 handlerMap
-rpcServer -> rpcServer : 启动 Netty 服务器\n配置 Pipeline:\nRpcDecoder -> RpcEncoder\n-> RpcProviderHandler
+rpcServer -> rpcServer : Initialize server\n(117.72.33.162:27880, scanPackage, reflectType)
+rpcServer -> rpcServer : Initialize RegistryService\n(117.72.33.162:2181, zookeeper)
+rpcServer -> svcScanner : Scan service package
+svcScanner -> svcScanner : Find @RpcService classes
+svcScanner -> svcScanner : Create service instances
+svcScanner -> svcScanner : Build service key\n(interface#version#group)
+svcScanner -> svcScanner : Register to Zookeeper\n(ServiceMeta: name, version, host, port, group)
+svcScanner --> rpcServer : Return handlerMap
+rpcServer -> rpcServer : Start Netty server\nPipeline: RpcDecoder\n-> RpcEncoder\n-> RpcProviderHandler
 
 note right of rpcServer
-  服务端准备就绪
-  等待客户端连接
+  Provider ready at 117.72.33.162:27880
+  Services registered to Zookeeper
+  Waiting for connections
 end note
 
-== 客户端调用阶段 ==
+== Client Invocation Phase ==
 
-client -> rpcClient : 创建 RpcClient\n(version, group, serializationType,\ntimeout, async, oneway)
-rpcClient -> jdkProxyFactory : 创建代理工厂
-jdkProxyFactory -> objectProxy : 创建 ObjectProxy
-jdkProxyFactory --> rpcClient : 返回代理对象
-client -> objectProxy : 调用服务方法\nservice.hello("World")
+client -> rpcClient : Create RpcClient\n(117.72.33.162:2181, zookeeper,\nversion, group, serializationType,\ntimeout, async, oneway)
+rpcClient -> rpcClient : Initialize RegistryService\n(117.72.33.162:2181, zookeeper)
+rpcClient -> jdkProxyFactory : Create proxy factory
+jdkProxyFactory -> objectProxy : Create ObjectProxy
+jdkProxyFactory --> rpcClient : Return proxy
+client -> objectProxy : Call service method\nservice.hello("World")
 
-objectProxy -> objectProxy : 拦截方法调用
-objectProxy -> headerFactory : 创建 RpcHeader
-headerFactory --> objectProxy : 返回 header\n(magic, requestId, messageType, etc.)
-objectProxy -> objectProxy : 构建 RpcRequest\n(className, methodName,\nparameterTypes, parameters)
-objectProxy -> objectProxy : 封装 RpcProtocol<RpcRequest>
+objectProxy -> objectProxy : Intercept method call
+objectProxy -> headerFactory : Create RpcHeader
+headerFactory --> objectProxy : Return header\n(magic, requestId, messageType)
+objectProxy -> objectProxy : Build RpcRequest\n(className, methodName,\nparameterTypes, parameters)
+objectProxy -> objectProxy : Wrap RpcProtocol<RpcRequest>
 
-objectProxy -> rpcConsumer : sendRequest(protocol)
-rpcConsumer -> rpcConsumer : 获取或创建连接\n(连接复用机制)
-rpcConsumer -> consumerHandler : 获取 RpcConsumerHandler
+objectProxy -> rpcConsumer : sendRequest(protocol, registryService)
+rpcConsumer -> rpcConsumer : Build service key\n(interface#version#group)
+rpcConsumer -> rpcConsumer : Discover service from Zookeeper\n(get ServiceMeta with load balancing)
+rpcConsumer -> rpcConsumer : Get/create connection to provider\n(117.72.33.162:27880, connection reuse)
+rpcConsumer -> consumerHandler : Get RpcConsumerHandler
 
-consumerHandler -> consumerHandler : 判断调用模式\n(sync/async/oneway)
-consumerHandler -> consumerHandler : 创建 RpcFuture\n存入 pendingRPC Map
+consumerHandler -> consumerHandler : Determine call mode\n(sync/async/oneway)
+consumerHandler -> consumerHandler : Create RpcFuture\nStore in pendingRPC Map
 
-consumerHandler -> encoder : 编码请求
-encoder -> encoder : 写入协议头\n(magic, messageType, status,\nrequestId, serializationType)
-encoder -> encoder : 序列化消息体
-encoder -> network : 发送字节流
+consumerHandler -> encoder : Encode request
+encoder -> encoder : Write protocol header\n(magic, messageType, status,\nrequestId, serializationType)
+encoder -> encoder : Serialize message body
+encoder -> network : Send byte stream
 
-== 服务端处理阶段 ==
+== Provider Processing Phase ==
 
-network -> decoder : 接收字节流
-decoder -> decoder : 读取协议头\n验证 magic number
-decoder -> decoder : 反序列化消息体
-decoder --> providerHandler : 传递 RpcProtocol<RpcRequest>
+network -> decoder : Receive byte stream
+decoder -> decoder : Read protocol header\nValidate magic number
+decoder -> decoder : Deserialize message body
+decoder --> providerHandler : Pass RpcProtocol<RpcRequest>
 
-providerHandler -> threadPool : 提交任务到线程池
-threadPool -> providerHandler : 异步执行
+providerHandler -> threadPool : Submit to thread pool
+threadPool -> providerHandler : Async execution
 
-providerHandler -> providerHandler : 构建服务键\n(className#version#group)
-providerHandler -> providerHandler : 从 handlerMap 查找服务实例
-providerHandler -> providerHandler : 获取方法信息\n(methodName, parameterTypes)
+providerHandler -> providerHandler : Build service key\n(className#version#group)
+providerHandler -> providerHandler : Lookup service from handlerMap
+providerHandler -> providerHandler : Get method info\n(methodName, parameterTypes)
 
-alt 使用 JDK 反射
+alt JDK Reflection
   providerHandler -> serviceBean : method.invoke(serviceBean, parameters)
-else 使用 CGLIB 反射
+else CGLIB Reflection
   providerHandler -> serviceBean : FastMethod.invoke(serviceBean, parameters)
 end
 
-serviceBean --> providerHandler : 返回执行结果
+serviceBean --> providerHandler : Return result
 
-providerHandler -> providerHandler : 构建 RpcResponse\n(result or error)
-providerHandler -> providerHandler : 设置响应头\n(messageType=RESPONSE, status)
-providerHandler -> encoder : 编码响应
+providerHandler -> providerHandler : Build RpcResponse\n(result or error)
+providerHandler -> providerHandler : Set response header\n(messageType=RESPONSE, status)
+providerHandler -> encoder : Encode response
 
-encoder -> encoder : 序列化响应
-encoder -> network : 发送响应字节流
+encoder -> encoder : Serialize response
+encoder -> network : Send response bytes
 
-== 客户端接收响应阶段 ==
+== Client Response Phase ==
 
-network -> decoder : 接收响应字节流
-decoder -> decoder : 解码响应
-decoder --> consumerHandler : 传递 RpcProtocol<RpcResponse>
+network -> decoder : Receive response bytes
+decoder -> decoder : Decode response
+decoder --> consumerHandler : Pass RpcProtocol<RpcResponse>
 
-consumerHandler -> consumerHandler : 提取 requestId
-consumerHandler -> consumerHandler : 从 pendingRPC 移除 RpcFuture
-consumerHandler -> consumerHandler : 调用 rpcFuture.done(response)
+consumerHandler -> consumerHandler : Extract requestId
+consumerHandler -> consumerHandler : Remove RpcFuture from pendingRPC
+consumerHandler -> consumerHandler : Call rpcFuture.done(response)
 
-alt 同步调用
-  consumerHandler --> objectProxy : 释放阻塞的 Future.get()
-  objectProxy --> client : 返回结果
-else 异步调用
-  consumerHandler -> consumerHandler : 执行回调函数\n(AsyncRpcCallback)
-  consumerHandler --> client : 通过回调返回结果
-else 单向调用
+alt Sync Call
+  consumerHandler --> objectProxy : Release blocked Future.get()
+  objectProxy --> client : Return result
+else Async Call
+  consumerHandler -> consumerHandler : Execute callback\n(AsyncRpcCallback)
+  consumerHandler --> client : Return via callback
+else Oneway Call
   note right of consumerHandler
-    无需等待响应
-    直接返回
+    No response needed
+    Return immediately
   end note
 end
 
-== 核心特性说明 ==
+== Core Features ==
 
 note over rpcClient, objectProxy
-  **客户端核心组件**
-  - RpcClient: 客户端入口，管理配置
-  - JdkProxyFactory: 创建 JDK 动态代理
-  - ObjectProxy: 拦截方法调用，转换为 RPC 请求
-  - 支持同步、异步、单向三种调用模式
+  **Client Components**
+  - RpcClient: Entry point, config management
+  - RegistryService: Service discovery from Zookeeper
+  - JdkProxyFactory: Create JDK dynamic proxy
+  - ObjectProxy: Intercept calls, convert to RPC
+  - Support sync/async/oneway modes
 end note
 
 note over rpcConsumer, consumerHandler
-  **网络通信层**
-  - RpcConsumer: 单例模式，管理连接池
-  - RpcConsumerHandler: 处理请求响应匹配
-  - 连接复用机制，减少连接开销
-  - 通过 requestId 实现请求响应精确匹配
+  **Network Layer**
+  - RpcConsumer: Singleton, connection pool
+  - Service discovery via RegistryService
+  - Load balancing (Random/RoundRobin/ConsistentHash)
+  - RpcConsumerHandler: Request-response matching
+  - Connection reuse mechanism
+  - Precise matching via requestId
 end note
 
 note over encoder, decoder
-  **编解码层**
-  - 自定义二进制协议
-  - 协议头固定 32 字节
-  - 支持多种序列化方式
+  **Codec Layer**
+  - Custom binary protocol
+  - Fixed 32-byte header
+  - Multiple serialization support
   - Magic Number: 0x10
 end note
 
 note over providerHandler, serviceBean
-  **服务端处理层**
-  - 线程池异步处理请求
-  - 支持 JDK 和 CGLIB 两种反射方式
-  - 服务通过 接口#版本#分组 唯一标识
-  - 自动扫描 @RpcService 注解的服务
+  **Provider Processing**
+  - Thread pool async processing
+  - JDK/CGLIB reflection support
+  - Service identified by interface#version#group
+  - Auto-scan @RpcService annotations
 end note
 
 note over rpcServer, svcScanner
-  **服务注册与发现**
-  - 启动时扫描指定包
-  - 自动注册服务到 handlerMap
-  - 支持服务分组和版本管理
-  - 基于 Netty 的高性能服务器
+  **Service Registry**
+  - Scan packages on startup
+  - Auto-register to Zookeeper (117.72.33.162:2181)
+  - Register to local handlerMap
+  - Service grouping and versioning
+  - ServiceMeta: name, version, host, port, group
+  - High-performance Netty server
 end note
 
 @enduml

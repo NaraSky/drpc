@@ -4,6 +4,9 @@ import com.rain.rpc.codec.RpcDecoder;
 import com.rain.rpc.codec.RpcEncoder;
 import com.rain.rpc.provider.common.handler.RpcProviderHandler;
 import com.rain.rpc.provider.common.server.api.Server;
+import com.rain.rpc.registry.api.RegistryService;
+import com.rain.rpc.registry.api.config.RegistryConfig;
+import com.rain.rpc.registry.zookeeper.ZookeeperRegistryService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -35,48 +38,54 @@ public class BaseServer implements Server {
     protected Map<String, Object> handlerMap = new HashMap<>();
     private String reflectType;
 
-    /**
-     * Constructs a BaseServer with the specified server address.
-     * If serverAddress is null or empty, uses default host and port.
-     *
-     * @param serverAddress the server address in "host:port" format, or null/empty for default
-     * @param reflectType the type of reflection to use for service invocation
-     */
-    public BaseServer(String serverAddress, String reflectType) {
-        LOGGER.info("Initializing BaseServer with serverAddress={}, reflectType={}", serverAddress, reflectType);
+    protected RegistryService registryService;
 
+    /**
+     * Initialize base server with address parsing and registry setup
+     * @param serverAddress server address (host:port), uses default if empty
+     * @param registryAddress registry center address
+     * @param registryType registry type (zookeeper/nacos/etcd)
+     * @param reflectType reflection type (jdk/cglib)
+     */
+    public BaseServer(String serverAddress, String registryAddress, String registryType, String reflectType) {
         if (!StringUtils.isEmpty(serverAddress)) {
             String[] serverArray = serverAddress.split(":");
-            // Check if the server address has both host and port
             if (serverArray.length == 2) {
                 this.host = serverArray[0];
                 try {
                     this.port = Integer.parseInt(serverArray[1]);
                 } catch (NumberFormatException e) {
-                    LOGGER.error("Invalid port number: {}, using default port: {}", serverArray[1], DEFAULT_PORT);
+                    LOGGER.error("Invalid port: {}, using default: {}", serverArray[1], DEFAULT_PORT);
                     this.port = DEFAULT_PORT;
                 }
             } else {
-                LOGGER.warn("Invalid server address format: {}, using default host: {} and port: {}", serverAddress, DEFAULT_HOST, DEFAULT_PORT);
+                LOGGER.warn("Invalid address format: {}, using default {}:{}", serverAddress, DEFAULT_HOST, DEFAULT_PORT);
             }
-        } else {
-            LOGGER.info("No server address provided, using default host: {} and port: {}", DEFAULT_HOST, DEFAULT_PORT);
         }
+        
         this.reflectType = reflectType;
-        LOGGER.info("BaseServer initialized with host: {}, port: {}, reflectType: {}", this.host, this.port, this.reflectType);
+        this.registryService = getRegistryService(registryAddress, registryType);
+        LOGGER.info("BaseServer init - {}:{}, reflect: {}, registry: {}:{}", 
+            this.host, this.port, this.reflectType, registryType, registryAddress);
     }
 
-    /**
-     * Start the Netty RPC server with the configured host and port.
-     * Sets up the Netty pipeline with RPC decoder, encoder, and handler.
-     */
+    private RegistryService getRegistryService(String registryAddress, String registryType) {
+        try {
+            RegistryService service = new ZookeeperRegistryService();
+            service.init(new RegistryConfig(registryAddress, registryType));
+            return service;
+        } catch (Exception e) {
+            LOGGER.error("Registry service init failed: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
     @Override
     public void startNettyServer() {
-        LOGGER.info("Starting Netty RPC Server on {}:{}", host, port);
+        LOGGER.info("Starting Netty server on {}:{}", host, port);
 
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
-        LOGGER.debug("Created EventLoopGroups: bossGroup={}, workerGroup={}", bossGroup, workerGroup);
 
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -84,34 +93,27 @@ public class BaseServer implements Server {
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(SocketChannel channel) throws Exception {
-                            LOGGER.debug("Initializing channel pipeline for new connection: {}", channel.remoteAddress());
+                        protected void initChannel(SocketChannel channel) {
                             ChannelPipeline pipeline = channel.pipeline();
-                            // Add RPC codec handlers and provider handler to the pipeline
                             pipeline.addLast(new RpcDecoder());
                             pipeline.addLast(new RpcEncoder());
                             pipeline.addLast(new RpcProviderHandler(reflectType, handlerMap));
-                            LOGGER.debug("Channel pipeline initialization completed");
                         }
                     })
                     .option(io.netty.channel.ChannelOption.SO_BACKLOG, 128)
                     .childOption(io.netty.channel.ChannelOption.SO_KEEPALIVE, true);
 
-            LOGGER.debug("ServerBootstrap configured with channel type: {}, SO_BACKLOG: {}, SO_KEEPALIVE: {}", 
-                    NioServerSocketChannel.class.getSimpleName(), 128, true);
-
             ChannelFuture channelFuture = bootstrap.bind(host, port).sync();
-            LOGGER.info("RPC Provider Server started successfully on {}:{}, handlerMap size: {}", host, port, handlerMap.size());
+            LOGGER.info("Server started - {}:{}, {} services registered", host, port, handlerMap.size());
 
             channelFuture.channel().closeFuture().sync();
-            LOGGER.debug("Server channel closed");
         } catch (InterruptedException e) {
-            LOGGER.error("RPC Provider Server interrupted during operation: {}", e.getMessage(), e);
-            Thread.currentThread().interrupt(); // Preserve the interrupted status
+            LOGGER.error("Server interrupted: {}", e.getMessage(), e);
+            Thread.currentThread().interrupt();
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
-            LOGGER.info("RPC Provider Server shutdown completed");
+            LOGGER.info("Server shutdown completed");
         }
     }
 }

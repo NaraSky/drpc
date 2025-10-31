@@ -17,6 +17,7 @@
         <module>drpc-test-provider</module>
         <module>drpc-test-consumer</module>
         <module>drpc-test-api</module>
+        <module>drpc-test-registry</module>
     </modules>
 
     <properties>

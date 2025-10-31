@@ -3,7 +3,7 @@
 class RpcReference <<annotation>> {
   +String version() default "1.0.0"
   +String registryType() default "zookeeper"
-  +String registryAddr() default "127.0.0.1:2181"
+  +String registryAddr() default "117.72.33.162:2181"
   +String loadBalanceType() default "random"
   +String serializationType() default "protostuff"
   +long timeout() default 5000
@@ -124,12 +124,13 @@ class BaseServer {
   #int port
   #Map<String, Object> handlerMap
   -String reflectType
-  +BaseServer(String, String)
+  #RegistryService registryService
+  +BaseServer(String, String, String, String)
   +startNettyServer()
 }
 
 class RpcSingleServer {
-  +RpcSingleServer(String, String, String)
+  +RpcSingleServer(String, String, String, String, String)
 }
 
 class RpcProviderHandler {
@@ -306,6 +307,49 @@ class RpcConstants <<constants>> {
 class SerializerException <<exception>> {
 }
 
+' Registry Module
+interface RegistryService {
+  +init(RegistryConfig)
+  +register(ServiceMeta)
+  +unRegister(ServiceMeta)
+  +discovery(String, int)
+  +destroy()
+}
+
+class ZookeeperRegistryService {
+  -ServiceDiscovery<ServiceMeta> serviceDiscovery
+  -ServiceLoadBalancer<ServiceInstance<ServiceMeta>> serviceLoadBalancer
+  +init(RegistryConfig)
+  +register(ServiceMeta)
+  +unRegister(ServiceMeta)
+  +discovery(String, int)
+  +destroy()
+}
+
+class RegistryConfig {
+  -String registryAddress
+  -String registryType
+  +RegistryConfig(String, String)
+}
+
+class ServiceMeta {
+  -String serviceName
+  -String serviceVersion
+  -String serviceAddr
+  -int servicePort
+  -String serviceGroup
+  +ServiceMeta(String, String, String, int, String)
+}
+
+' Load Balancer Module
+interface ServiceLoadBalancer {
+  +select(List<T>, int)
+}
+
+class RandomServiceLoadBalancer {
+  +select(List<T>, int)
+}
+
 ' 关系定义
 RpcProtocol *-- RpcHeader
 RpcRequest --|> RpcMessage
@@ -396,5 +440,18 @@ RpcConsumerHandler ..> RpcContext : uses for async
 RpcFuture ..> AsyncRpcCallback : manages
 ObjectProxy ..> RpcHeaderFactory : uses
 ObjectProxy ..> RpcProtocol : creates
+
+' Registry relationships
+ZookeeperRegistryService ..|> RegistryService
+ZookeeperRegistryService ..> RegistryConfig : uses
+ZookeeperRegistryService ..> ServiceMeta : manages
+ZookeeperRegistryService ..> ServiceLoadBalancer : uses
+RandomServiceLoadBalancer ..|> ServiceLoadBalancer
+BaseServer ..> RegistryService : uses
+RpcSingleServer ..> RpcServiceScanner : uses for registration
+RpcServiceScanner ..> RegistryService : registers to
+RpcConsumer ..> RegistryService : discovers from
+RpcClient ..> RegistryService : uses
+ObjectProxy ..> RegistryService : uses
 
 @enduml

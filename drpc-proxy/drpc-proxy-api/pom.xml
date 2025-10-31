@@ -24,6 +24,11 @@
             <artifactId>drpc-protocol</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.rain.rpc.registry.api</groupId>
+            <artifactId>drpc-registry-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

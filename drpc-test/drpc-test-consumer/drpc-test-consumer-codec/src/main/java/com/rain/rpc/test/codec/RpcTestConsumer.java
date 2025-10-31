@@ -26,7 +26,7 @@ public class RpcTestConsumer {
                     .channel(NioSocketChannel.class)
                     .handler(new RpcTestConsumerInitializer());
 
-            String host = "127.0.0.1";
+            String host = "117.73.33.162";
             int port = 27880;
 
             bootstrap.connect(host, port).sync();
